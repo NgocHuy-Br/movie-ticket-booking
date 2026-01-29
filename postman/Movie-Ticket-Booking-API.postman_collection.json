@@ -1,0 +1,119 @@
+{
+    "info": {
+        "_postman_id": "movie-ticket-booking-2025",
+        "name": "Movie Ticket Booking API",
+        "description": "API Testing for Movie Ticket Booking System - PTIT 2025",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "_exporter_id": "movie-ticket-booking"
+    },
+    "item": [
+        {
+            "name": "Test APIs",
+            "item": [
+                {
+                    "name": "Hello World",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/test/hello",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "test",
+                                "hello"
+                            ]
+                        },
+                        "description": "Test basic API connectivity with Hello World message"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/test/health",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "test",
+                                "health"
+                            ]
+                        },
+                        "description": "Check service health status"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "System Info",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/test/info",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "test",
+                                "info"
+                            ]
+                        },
+                        "description": "Get system and project information"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Echo Test",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"message\": \"Hello from Postman!\",\n    \"user\": \"PTIT Student\",\n    \"course\": \"Lap trinh Web\",\n    \"semester\": \"HK4 2025\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/test/echo",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "test",
+                                "echo"
+                            ]
+                        },
+                        "description": "Test POST request with JSON payload"
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Basic testing endpoints for backend validation"
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8080",
+            "type": "string"
+        }
+    ]
+}
