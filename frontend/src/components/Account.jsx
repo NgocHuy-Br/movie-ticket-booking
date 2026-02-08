@@ -37,6 +37,21 @@ const Account = () => {
       navigate('/');
     }
 
+    // Listen for logout event
+    const handleLogout = () => {
+      navigate('/');
+    };
+    window.addEventListener('userLogout', handleLogout);
+
+    // Listen for profile update event
+    const handleProfileUpdate = () => {
+      const updatedInfo = getUserInfo();
+      if (updatedInfo) {
+        setUserInfo(updatedInfo);
+      }
+    };
+    window.addEventListener('userProfileUpdate', handleProfileUpdate);
+
     // Load booking history từ localStorage
     try {
       const history = localStorage.getItem('bookingHistory');
@@ -47,12 +62,12 @@ const Account = () => {
           setBookingHistory(parsedHistory);
         }
       }
-      
+
       // Kiểm tra xem đã có vé test có thể huỷ chưa
-      const hasCancellableTestTicket = parsedHistory.some(ticket => 
+      const hasCancellableTestTicket = parsedHistory.some(ticket =>
         ticket.movie === 'Test Movie - Có thể huỷ' && ticket.status === 'purchased'
       );
-      
+
       // Nếu chưa có vé test có thể huỷ, tạo một vé mới
       if (!hasCancellableTestTicket) {
         const now = new Date();
@@ -61,7 +76,7 @@ const Account = () => {
         const hours = String(future.getHours()).padStart(2, '0');
         const mins = String(future.getMinutes()).padStart(2, '0');
         const time = `${hours}:${mins}`;
-        
+
         const testTicket = {
           id: Date.now(),
           movie: 'Test Movie - Có thể huỷ',
@@ -73,7 +88,7 @@ const Account = () => {
           status: 'purchased',
           ticketCode: `MV${date.replace(/-/g, '')}999`
         };
-        
+
         const ticketsWithTest = [testTicket, ...parsedHistory];
         setBookingHistory(ticketsWithTest);
         localStorage.setItem('bookingHistory', JSON.stringify(ticketsWithTest));
@@ -99,6 +114,12 @@ const Account = () => {
     if (location.state && location.state.tab) {
       setActiveTab(location.state.tab);
     }
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('userLogout', handleLogout);
+      window.removeEventListener('userProfileUpdate', handleProfileUpdate);
+    };
   }, [navigate, location]);
 
   const getPaymentMethodName = (method) => {
@@ -255,15 +276,15 @@ const Account = () => {
   // Kiểm tra xem có thể huỷ vé không (còn > 60 phút trước giờ chiếu)
   const canCancelTicket = (booking) => {
     if (booking.status !== 'purchased') return false;
-    
+
     const now = new Date();
     const [hours, minutes] = booking.time.split(':');
     const showTime = new Date(`${booking.date}T${hours}:${minutes}:00`);
-    
+
     // Tính thời gian còn lại (milliseconds)
     const timeDiff = showTime.getTime() - now.getTime();
     const minutesDiff = timeDiff / (1000 * 60);
-    
+
     return minutesDiff > 60;
   };
 
@@ -282,7 +303,7 @@ const Account = () => {
     const { bookingId, booking } = cancelTicketModal;
 
     // Cập nhật status thành 'cancelled'
-    const updatedHistory = bookingHistory.map(b => 
+    const updatedHistory = bookingHistory.map(b =>
       b.id === bookingId ? { ...b, status: 'cancelled' } : b
     );
     setBookingHistory(updatedHistory);
@@ -293,23 +314,23 @@ const Account = () => {
     setAccountBalance(newBalance);
     localStorage.setItem('accountBalance', newBalance.toString());
 
-      // Thêm vào lịch sử thanh toán
-      try {
-        const paymentHistory = JSON.parse(localStorage.getItem('paymentHistory') || '[]');
-        paymentHistory.unshift({
-          id: Date.now(),
-          date: new Date().toISOString().split('T')[0],
-          amount: booking.total,
-          method: 'Hoàn tiền',
-          status: 'refund',
-          type: 'refund',
-          ticketCode: booking.ticketCode
-        });
-        localStorage.setItem('paymentHistory', JSON.stringify(paymentHistory));
-        setPaymentHistory(paymentHistory);
-      } catch (error) {
-        console.error('Error saving payment history:', error);
-      }
+    // Thêm vào lịch sử thanh toán
+    try {
+      const paymentHistory = JSON.parse(localStorage.getItem('paymentHistory') || '[]');
+      paymentHistory.unshift({
+        id: Date.now(),
+        date: new Date().toISOString().split('T')[0],
+        amount: booking.total,
+        method: 'Hoàn tiền',
+        status: 'refund',
+        type: 'refund',
+        ticketCode: booking.ticketCode
+      });
+      localStorage.setItem('paymentHistory', JSON.stringify(paymentHistory));
+      setPaymentHistory(paymentHistory);
+    } catch (error) {
+      console.error('Error saving payment history:', error);
+    }
 
     setCancelTicketModal(null);
     alert(`Đã huỷ vé thành công!\nSố tiền ${booking.total.toLocaleString('vi-VN')}đ đã được hoàn vào tài khoản.`);
@@ -332,8 +353,8 @@ const Account = () => {
                   <img src={avatar} alt="Avatar" className="avatar-image" />
                 ) : (
                   <svg className="avatar-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M20.59 22C20.59 18.13 16.74 15 12 15C7.26 15 3.41 18.13 3.41 22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M20.59 22C20.59 18.13 16.74 15 12 15C7.26 15 3.41 18.13 3.41 22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 )}
               </div>
@@ -395,7 +416,7 @@ const Account = () => {
                         <p><strong>Ghế:</strong> {booking.seats.join(', ')}</p>
                         <p className="history-total"><strong>Tổng tiền:</strong> {booking.total.toLocaleString('vi-VN')}đ</p>
                         {canCancelTicket(booking) && (
-                          <button 
+                          <button
                             className="cancel-ticket-btn"
                             onClick={() => handleCancelTicketClick(booking.id)}
                           >
@@ -426,13 +447,13 @@ const Account = () => {
               </div>
             </div>
 
-              {showTopUpModal && (
-                <div className="modal-overlay" onClick={() => {
-                  setShowTopUpModal(false);
-                  setTopUpAmount('');
-                  setTopUpAmountError('');
-                  setTopUpPaymentMethod('momo');
-                }}>
+            {showTopUpModal && (
+              <div className="modal-overlay" onClick={() => {
+                setShowTopUpModal(false);
+                setTopUpAmount('');
+                setTopUpAmountError('');
+                setTopUpPaymentMethod('momo');
+              }}>
                 <div className="modal-content topup-modal" onClick={(e) => e.stopPropagation()}>
                   <h3>Nạp Tiền Vào Tài Khoản</h3>
                   <div className="topup-form">
@@ -664,7 +685,7 @@ const Account = () => {
                 <p><strong>Số tiền nạp:</strong> {topUpSuccessData.amount.toLocaleString('vi-VN')}đ</p>
                 <p><strong>Phương thức:</strong> {topUpSuccessData.method}</p>
                 <p style={{ marginTop: '15px', paddingTop: '15px', borderTop: '2px solid #28a745' }}>
-                  <strong style={{ color: '#28a745' }}>Số dư hiện tại:</strong> 
+                  <strong style={{ color: '#28a745' }}>Số dư hiện tại:</strong>
                   <span style={{ color: '#28a745', fontWeight: 'bold', fontSize: '18px', marginLeft: '10px' }}>
                     {topUpSuccessData.newBalance.toLocaleString('vi-VN')}đ
                   </span>
@@ -672,8 +693,8 @@ const Account = () => {
               </div>
             </div>
             <div className="modal-actions">
-              <button 
-                className="confirm-btn" 
+              <button
+                className="confirm-btn"
                 onClick={() => setShowTopUpSuccessModal(false)}
                 style={{ width: '100%' }}
               >

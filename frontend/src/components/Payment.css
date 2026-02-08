@@ -1,7 +1,7 @@
 .payment-container {
-  max-width: 1200px;
-  margin: 20px auto;
-  padding: 20px;
+  width: 100%;
+  padding: 30px 60px;
+  min-height: calc(100vh - 80px);
 }
 
 .payment-header {
@@ -155,7 +155,7 @@
   cursor: pointer;
 }
 
-.payment-method-option input[type="radio"]:checked + span {
+.payment-method-option input[type="radio"]:checked+span {
   color: #007bff;
   font-weight: 600;
 }
@@ -180,7 +180,7 @@
 
 .balance-amount {
   font-weight: normal;
-  color: #999 ;
+  color: #999;
   font-size: 9px;
 }
 
@@ -243,7 +243,7 @@
   line-height: 1.8;
 }
 
-.payment-confirm-info > p {
+.payment-confirm-info>p {
   margin: 0 0 15px 0;
   color: #333;
   font-size: 15px;
@@ -381,15 +381,26 @@
   cursor: not-allowed;
 }
 
-@media (max-width: 968px) {
+@media (max-width: 1440px) {
+  .payment-container {
+    padding: 30px 40px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .payment-container {
+    padding: 25px 30px;
+  }
+
   .payment-content {
     grid-template-columns: 1fr;
+    gap: 25px;
   }
 }
 
 @media (max-width: 768px) {
   .payment-container {
-    padding: 15px;
+    padding: 20px 20px;
   }
 
   .payment-header h1 {
@@ -411,3 +422,17 @@
   }
 }
 
+@media (max-width: 480px) {
+  .payment-container {
+    padding: 15px 15px;
+  }
+
+  .payment-header h1 {
+    font-size: 1.6em;
+  }
+
+  .booking-summary-section,
+  .payment-form-section {
+    padding: 15px;
+  }
+}

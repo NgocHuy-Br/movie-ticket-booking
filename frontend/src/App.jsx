@@ -6,7 +6,9 @@ import Login from './components/Login';
 import Booking from './components/Booking';
 import Payment from './components/Payment';
 import Account from './components/Account';
+import Admin from './components/Admin';
 import ScrollToTop from './components/ScrollToTop';
+import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
 function App() {
@@ -18,9 +20,38 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/booking/:movieId" element={<Booking />} />
-          <Route path="/payment" element={<Payment />} />
-          <Route path="/account" element={<Account />} />
+          <Route
+            path="/booking/:movieId"
+            element={
+              <ProtectedRoute>
+                <Booking />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/payment"
+            element={
+              <ProtectedRoute>
+                <Payment />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/account"
+            element={
+              <ProtectedRoute>
+                <Account />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <Admin />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </div>
     </Router>

@@ -1,7 +1,7 @@
 .booking-container {
-  max-width: 1200px;
-  margin: 20px auto;
-  padding: 20px;
+  width: 100%;
+  padding: 30px 60px;
+  min-height: calc(100vh - 80px);
 }
 
 .booking-header {
@@ -314,9 +314,21 @@
   background-color: #218838;
 }
 
+@media (max-width: 1440px) {
+  .booking-container {
+    padding: 30px 40px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .booking-container {
+    padding: 25px 30px;
+  }
+}
+
 @media (max-width: 768px) {
   .booking-container {
-    padding: 15px;
+    padding: 20px 20px;
   }
 
   .booking-header h1 {
@@ -350,3 +362,20 @@
   }
 }
 
+@media (max-width: 480px) {
+  .booking-container {
+    padding: 15px 15px;
+  }
+
+  .booking-header h1 {
+    font-size: 1.6em;
+  }
+
+  .booking-info {
+    padding: 20px;
+  }
+
+  .seating-section {
+    padding: 20px;
+  }
+}
