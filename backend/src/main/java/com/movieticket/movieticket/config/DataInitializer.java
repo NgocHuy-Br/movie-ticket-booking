@@ -38,7 +38,7 @@ public class DataInitializer implements CommandLineRunner {
             admin.setBirthDate(LocalDate.of(1990, 1, 1));
             admin.setAddress("System");
             admin.setRole(User.Role.ADMIN);
-            admin.setMembershipLevel(User.MembershipLevel.PLATINUM);
+            admin.setMembershipLevel(null);  // Admin không có hạng thành viên
             admin.setPoints(0);
             admin.setAccountBalance(BigDecimal.ZERO);
 

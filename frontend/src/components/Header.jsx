@@ -112,8 +112,7 @@ const Header = () => {
                 <div className="user-details">
                   <span className="user-name">{userInfo.fullName || userInfo.username}</span>
                   <div className="user-badges">
-                    {getRoleBadge(userInfo.role)}
-                    {getMembershipBadge(userInfo.membershipLevel)}
+                    {userInfo.role === 'ADMIN' && <span className="role-text">Quản trị viên</span>}
                   </div>
                 </div>
                 <svg className={`dropdown-arrow ${showDropdown ? 'open' : ''}`} width="12" height="8" viewBox="0 0 12 8" fill="none">

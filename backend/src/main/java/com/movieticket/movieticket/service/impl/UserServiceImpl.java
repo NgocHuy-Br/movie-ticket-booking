@@ -87,7 +87,7 @@ public class UserServiceImpl implements UserService {
         dto.setAddress(user.getAddress());
         dto.setAvatar(user.getAvatar());
         dto.setRole(user.getRole().name());
-        dto.setMembershipLevel(user.getMembershipLevel().name());
+        dto.setMembershipLevel(user.getMembershipLevel() != null ? user.getMembershipLevel().name() : null);
         dto.setPoints(user.getPoints());
         dto.setAccountBalance(user.getAccountBalance().toString());
         return dto;

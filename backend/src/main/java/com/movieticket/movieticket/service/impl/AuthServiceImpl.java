@@ -112,7 +112,7 @@ public class AuthServiceImpl implements AuthService {
                 .phone(user.getPhone())
                 .avatar(user.getAvatar())
                 .role(user.getRole().name())
-                .membershipLevel(user.getMembershipLevel().name())
+                .membershipLevel(user.getMembershipLevel() != null ? user.getMembershipLevel().name() : null)
                 .build();
     }
 }
