@@ -26,7 +26,7 @@ public class DataInitializer implements CommandLineRunner {
                 .anyMatch(user -> user.getRole() == User.Role.ADMIN);
 
         if (!adminExists) {
-            log.info("Không tìm thấy tài khoản admin. Đang tạo tài khoản admin mặc định...");
+            log.info("Khong tim thay tai khoan admin. Dang tao tai khoan admin mac dinh...");
 
             User admin = new User();
             admin.setUsername("admin");
@@ -38,18 +38,20 @@ public class DataInitializer implements CommandLineRunner {
             admin.setBirthDate(LocalDate.of(1990, 1, 1));
             admin.setAddress("System");
             admin.setRole(User.Role.ADMIN);
-            admin.setMembershipLevel(null);  // Admin không có hạng thành viên
+            admin.setMembershipLevel(null); // Admin không có hạng thành viên
             admin.setPoints(0);
             admin.setAccountBalance(BigDecimal.ZERO);
 
             userRepository.save(admin);
 
-            log.info("✅ Đã tạo tài khoản admin mặc định:");
-            log.info("   Username: admin");
-            log.info("   Password: admin");
-            log.info("   ⚠️ Vui lòng đổi mật khẩu sau khi đăng nhập lần đầu!");
+            log.info("==============================================");
+            log.info("  Da tao tai khoan admin mac dinh:");
+            log.info("     Username: admin");
+            log.info("     Password: admin");
+            log.info("  Vui long doi mat khau sau khi dang nhap!");
+            log.info("==============================================");
         } else {
-            log.info("Tài khoản admin đã tồn tại.");
+            log.info("Tai khoan admin da ton tai.");
         }
     }
 }

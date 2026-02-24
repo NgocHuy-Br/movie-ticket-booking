@@ -63,16 +63,41 @@ const Account = () => {
     };
   }, [navigate]);
 
-  const handleAvatarChange = (e) => {
+  const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
         const avatarUrl = reader.result;
         setAvatar(avatarUrl);
-        const updatedUserInfo = { ...userInfo, avatar: avatarUrl };
-        updateUserInfo(updatedUserInfo);
-        setUserInfo(updatedUserInfo);
+
+        try {
+          const token = localStorage.getItem('token');
+          const response = await fetch('http://localhost:8080/api/users/profile', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              fullName: userInfo.fullName,
+              email: userInfo.email,
+              phone: userInfo.phone,
+              dateOfBirth: userInfo.dateOfBirth,
+              address: userInfo.address,
+              avatar: avatarUrl
+            })
+          });
+
+          const data = await response.json();
+          if (response.ok && data.success) {
+            const updatedUserInfo = { ...userInfo, avatar: avatarUrl };
+            updateUserInfo(updatedUserInfo);
+            setUserInfo(updatedUserInfo);
+          }
+        } catch (error) {
+          console.error('Error updating avatar:', error);
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -98,19 +123,57 @@ const Account = () => {
   };
 
   const handleSaveProfile = async () => {
-    try {
-      const updatedUserInfo = {
-        ...userInfo,
-        fullName: editForm.fullName,
-        email: editForm.email,
-        phone: editForm.phone,
-        dateOfBirth: editForm.dateOfBirth
-      };
+    // Validate phone number
+    if (editForm.phone && !/^0\d{9}$/.test(editForm.phone)) {
+      alert('Số điện thoại phải là 10 chữ số, bắt đầu bằng 0');
+      return;
+    }
 
-      updateUserInfo(updatedUserInfo);
-      setUserInfo(updatedUserInfo);
-      setIsEditing(false);
-      alert('Cập nhật thông tin thành công!');
+    // Validate email
+    if (editForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editForm.email)) {
+      alert('Email không hợp lệ');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Bạn cần đăng nhập lại!');
+        navigate('/');
+        return;
+      }
+
+      const response = await fetch('http://localhost:8080/api/users/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          fullName: editForm.fullName,
+          email: editForm.email,
+          phone: editForm.phone,
+          dateOfBirth: editForm.dateOfBirth,
+          address: userInfo.address,
+          avatar: userInfo.avatar
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Update localStorage with data from backend
+        const updatedUserInfo = {
+          ...userInfo,
+          ...data.data
+        };
+        updateUserInfo(updatedUserInfo);
+        setUserInfo(updatedUserInfo);
+        setIsEditing(false);
+        alert('Cập nhật thông tin thành công!');
+      } else {
+        alert(data.message || 'Có lỗi xảy ra khi cập nhật thông tin!');
+      }
     } catch (error) {
       console.error('Error updating profile:', error);
       alert('Có lỗi xảy ra khi cập nhật thông tin!');
@@ -319,7 +382,9 @@ const Account = () => {
                       name="phone"
                       value={editForm.phone}
                       onChange={handleInputChange}
-                      placeholder="Nhập số điện thoại"
+                      placeholder="Nhập số điện thoại (10 số, bắt đầu bằng 0)"
+                      pattern="^0\d{9}$"
+                      maxLength="10"
                     />
                   </div>
                   <div className="form-group">

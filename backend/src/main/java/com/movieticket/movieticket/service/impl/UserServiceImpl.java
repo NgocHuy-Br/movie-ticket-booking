@@ -43,6 +43,21 @@ public class UserServiceImpl implements UserService {
             }
             user.setEmail(profileDto.getEmail());
         }
+        if (profileDto.getPhone() != null && !profileDto.getPhone().isBlank()) {
+            // Check if phone already exists for another user
+            if (!user.getPhone().equals(profileDto.getPhone()) &&
+                    userRepository.existsByPhone(profileDto.getPhone())) {
+                throw new RuntimeException("Phone already exists");
+            }
+            user.setPhone(profileDto.getPhone());
+        }
+        if (profileDto.getDateOfBirth() != null && !profileDto.getDateOfBirth().isBlank()) {
+            try {
+                user.setBirthDate(java.time.LocalDate.parse(profileDto.getDateOfBirth()));
+            } catch (Exception e) {
+                throw new RuntimeException("Invalid date format");
+            }
+        }
         if (profileDto.getAddress() != null) {
             user.setAddress(profileDto.getAddress());
         }

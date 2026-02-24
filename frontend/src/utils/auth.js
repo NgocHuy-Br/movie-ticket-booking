@@ -1,9 +1,32 @@
 // Authentication utility functions
 
+const parseJwt = (token) => {
+    try {
+        const [, payload] = token.split('.');
+        return JSON.parse(atob(payload));
+    } catch (err) {
+        return null;
+    }
+};
+
+const isTokenExpired = (token) => {
+    const data = parseJwt(token);
+    if (!data || !data.exp) return true; // nếu không đọc được exp, coi như hết hạn
+    const now = Date.now();
+    return data.exp * 1000 <= now;
+};
+
 export const isAuthenticated = () => {
     const token = localStorage.getItem('token');
     const userInfo = localStorage.getItem('userInfo');
-    return !!(token && userInfo);
+    if (!(token && userInfo)) return false;
+
+    if (isTokenExpired(token)) {
+        logout();
+        return false;
+    }
+
+    return true;
 };
 
 export const getUserInfo = () => {
@@ -19,7 +42,12 @@ export const getUserInfo = () => {
 };
 
 export const getToken = () => {
-    return localStorage.getItem('token');
+    const token = localStorage.getItem('token');
+    if (token && isTokenExpired(token)) {
+        logout();
+        return null;
+    }
+    return token;
 };
 
 export const login = (token, userInfo) => {
@@ -33,6 +61,14 @@ export const logout = () => {
     localStorage.removeItem('userInfo');
     localStorage.removeItem('redirectAfterLogin');
     window.dispatchEvent(new Event('userLogout'));
+};
+
+// Gọi ở app khởi động để dọn phiên hết hạn (tránh lưu phiên sau khi tắt máy / rebuild)
+export const ensureAuthFreshness = () => {
+    const token = localStorage.getItem('token');
+    if (token && isTokenExpired(token)) {
+        logout();
+    }
 };
 
 export const updateUserInfo = (userInfo) => {

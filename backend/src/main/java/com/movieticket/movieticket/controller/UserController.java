@@ -2,9 +2,9 @@ package com.movieticket.movieticket.controller;
 
 import com.movieticket.movieticket.dto.ApiResponse;
 import com.movieticket.movieticket.dto.ChangePasswordRequest;
-import com.movieticket.movieticket.dto.UpdateProfileRequest;
 import com.movieticket.movieticket.dto.UserProfileDto;
 import com.movieticket.movieticket.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -13,7 +13,8 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:3000" })
+@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:5175",
+        "http://localhost:3000" })
 public class UserController {
 
     private final UserService userService;
@@ -27,7 +28,7 @@ public class UserController {
 
     @PutMapping("/profile")
     public ResponseEntity<ApiResponse<UserProfileDto>> updateUserProfile(
-            @RequestBody UserProfileDto profileDto,
+            @Valid @RequestBody UserProfileDto profileDto,
             Authentication authentication) {
         try {
             String username = authentication.getName();
