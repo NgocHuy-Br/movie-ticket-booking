@@ -45,7 +45,7 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "LONGTEXT")
     private String avatar;
 
     @Enumerated(EnumType.STRING)

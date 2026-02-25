@@ -4,7 +4,6 @@ import com.movieticket.movieticket.dto.ApiResponse;
 import com.movieticket.movieticket.dto.ChangePasswordRequest;
 import com.movieticket.movieticket.dto.UserProfileDto;
 import com.movieticket.movieticket.service.UserService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -28,7 +27,7 @@ public class UserController {
 
     @PutMapping("/profile")
     public ResponseEntity<ApiResponse<UserProfileDto>> updateUserProfile(
-            @Valid @RequestBody UserProfileDto profileDto,
+            @RequestBody UserProfileDto profileDto,
             Authentication authentication) {
         try {
             String username = authentication.getName();

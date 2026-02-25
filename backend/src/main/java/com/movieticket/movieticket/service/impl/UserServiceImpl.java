@@ -36,18 +36,26 @@ public class UserServiceImpl implements UserService {
             user.setName(profileDto.getFullName());
         }
         if (profileDto.getEmail() != null && !profileDto.getEmail().isBlank()) {
+            // Validate email format
+            if (!profileDto.getEmail().matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+                throw new RuntimeException("Email không hợp lệ");
+            }
             // Check if email already exists for another user
             if (!user.getEmail().equals(profileDto.getEmail()) &&
                     userRepository.existsByEmail(profileDto.getEmail())) {
-                throw new RuntimeException("Email already exists");
+                throw new RuntimeException("Email đã tồn tại");
             }
             user.setEmail(profileDto.getEmail());
         }
         if (profileDto.getPhone() != null && !profileDto.getPhone().isBlank()) {
+            // Validate phone format (10 digits, starts with 0)
+            if (!profileDto.getPhone().matches("^0\\d{9}$")) {
+                throw new RuntimeException("Số điện thoại phải là 10 chữ số, bắt đầu bằng 0");
+            }
             // Check if phone already exists for another user
             if (!user.getPhone().equals(profileDto.getPhone()) &&
                     userRepository.existsByPhone(profileDto.getPhone())) {
-                throw new RuntimeException("Phone already exists");
+                throw new RuntimeException("Số điện thoại đã tồn tại");
             }
             user.setPhone(profileDto.getPhone());
         }

@@ -8,6 +8,8 @@ const Account = () => {
   const navigate = useNavigate();
   const [userInfo, setUserInfo] = useState(null);
   const [avatar, setAvatar] = useState(null);
+  const [pendingAvatar, setPendingAvatar] = useState(null); // Avatar mới chọn chưa lưu
+  const [isSavingAvatar, setIsSavingAvatar] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     fullName: '',
@@ -63,44 +65,125 @@ const Account = () => {
     };
   }, [navigate]);
 
+  // Hàm compress và resize ảnh
+  const compressImage = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          // Giới hạn kích thước tối đa 800x800px
+          const maxSize = 800;
+          if (width > height) {
+            if (width > maxSize) {
+              height *= maxSize / width;
+              width = maxSize;
+            }
+          } else {
+            if (height > maxSize) {
+              width *= maxSize / height;
+              height = maxSize;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Compress với quality 0.7 (70%)
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          resolve(compressedBase64);
+        };
+        img.onerror = reject;
+      };
+      reader.onerror = reject;
+    });
+  };
+
   const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const avatarUrl = reader.result;
-        setAvatar(avatarUrl);
+      // Kiểm tra kích thước file (tối đa 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Kích thước ảnh không được vượt quá 5MB!');
+        return;
+      }
 
-        try {
-          const token = localStorage.getItem('token');
-          const response = await fetch('http://localhost:8080/api/users/profile', {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              fullName: userInfo.fullName,
-              email: userInfo.email,
-              phone: userInfo.phone,
-              dateOfBirth: userInfo.dateOfBirth,
-              address: userInfo.address,
-              avatar: avatarUrl
-            })
-          });
+      // Kiểm tra định dạng file
+      if (!file.type.startsWith('image/')) {
+        alert('Vui lòng chọn file ảnh!');
+        return;
+      }
 
-          const data = await response.json();
-          if (response.ok && data.success) {
-            const updatedUserInfo = { ...userInfo, avatar: avatarUrl };
-            updateUserInfo(updatedUserInfo);
-            setUserInfo(updatedUserInfo);
-          }
-        } catch (error) {
-          console.error('Error updating avatar:', error);
-        }
-      };
-      reader.readAsDataURL(file);
+      try {
+        // Compress và resize ảnh
+        const compressedImage = await compressImage(file);
+        setPendingAvatar(compressedImage);
+      } catch (error) {
+        console.error('Error compressing image:', error);
+        alert('Có lỗi xảy ra khi xử lý ảnh!');
+      }
     }
+  };
+
+  const handleSaveAvatar = async () => {
+    if (!pendingAvatar) return;
+
+    setIsSavingAvatar(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Bạn cần đăng nhập lại!');
+        navigate('/');
+        return;
+      }
+
+      const response = await fetch('http://localhost:8080/api/users/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          fullName: userInfo.fullName || userInfo.name,
+          email: userInfo.email || '',
+          phone: userInfo.phone || '',
+          dateOfBirth: userInfo.dateOfBirth || '',
+          address: userInfo.address || '',
+          avatar: pendingAvatar
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        const updatedUserInfo = { ...userInfo, avatar: pendingAvatar };
+        updateUserInfo(updatedUserInfo);
+        setUserInfo(updatedUserInfo);
+        setAvatar(pendingAvatar);
+        setPendingAvatar(null);
+        alert('Cập nhật ảnh đại diện thành công!');
+      } else {
+        alert(data.message || 'Có lỗi xảy ra khi cập nhật ảnh đại diện!');
+      }
+    } catch (error) {
+      console.error('Error updating avatar:', error);
+      alert('Có lỗi xảy ra khi cập nhật ảnh đại diện!');
+    } finally {
+      setIsSavingAvatar(false);
+    }
+  };
+
+  const handleCancelAvatar = () => {
+    setPendingAvatar(null);
   };
 
   const handleEditClick = () => {
@@ -274,24 +357,47 @@ const Account = () => {
             <div className="profile-content">
               <div className="avatar-section">
                 <div className="avatar-container">
-                  {avatar ? (
-                    <img src={avatar} alt="Avatar" className="avatar-image" />
+                  {(pendingAvatar || avatar) ? (
+                    <img src={pendingAvatar || avatar} alt="Avatar" className="avatar-image" />
                   ) : (
                     <svg className="avatar-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       <path d="M20.59 22C20.59 18.13 16.74 15 12 15C7.26 15 3.41 18.13 3.41 22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   )}
+                  {pendingAvatar && (
+                    <div className="avatar-pending-badge">Chưa lưu</div>
+                  )}
                 </div>
-                <label className="upload-btn">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarChange}
-                    style={{ display: 'none' }}
-                  />
-                  {avatar ? 'Đổi ảnh đại diện' : 'Tải ảnh đại diện'}
-                </label>
+
+                {!pendingAvatar ? (
+                  <label className="upload-btn">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarChange}
+                      style={{ display: 'none' }}
+                    />
+                    {avatar ? 'Đổi ảnh đại diện' : 'Tải ảnh đại diện'}
+                  </label>
+                ) : (
+                  <div className="avatar-actions">
+                    <button
+                      className="save-avatar-btn"
+                      onClick={handleSaveAvatar}
+                      disabled={isSavingAvatar}
+                    >
+                      {isSavingAvatar ? 'Đang lưu...' : 'Lưu ảnh'}
+                    </button>
+                    <button
+                      className="cancel-avatar-btn"
+                      onClick={handleCancelAvatar}
+                      disabled={isSavingAvatar}
+                    >
+                      Hủy
+                    </button>
+                  </div>
+                )}
               </div>
 
               {!isEditing ? (
