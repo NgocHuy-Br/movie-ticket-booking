@@ -3,6 +3,7 @@ package com.movieticket.movieticket.service.impl;
 import com.movieticket.movieticket.dto.TheaterDto;
 import com.movieticket.movieticket.entity.Theater;
 import com.movieticket.movieticket.repository.TheaterRepository;
+import com.movieticket.movieticket.repository.ShowtimeRepository;
 import com.movieticket.movieticket.service.TheaterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 public class TheaterServiceImpl implements TheaterService {
 
     private final TheaterRepository theaterRepository;
+    private final ShowtimeRepository showtimeRepository;
 
     @Override
     public List<TheaterDto> getAllTheaters() {
@@ -75,6 +77,10 @@ public class TheaterServiceImpl implements TheaterService {
     public void deleteTheater(Long id) {
         if (!theaterRepository.existsById(id)) {
             throw new RuntimeException("Theater not found with id: " + id);
+        }
+        // Check if theater has any showtimes
+        if (!showtimeRepository.findByTheaterId(id).isEmpty()) {
+            throw new RuntimeException("Cannot delete theater that has showtimes. Please delete all showtimes first.");
         }
         theaterRepository.deleteById(id);
     }

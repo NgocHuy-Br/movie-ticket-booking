@@ -36,11 +36,9 @@ public class Movie {
     @Column(name = "age_rating", nullable = false, length = 10)
     private String ageRating;
 
-    @Column(name = "poster_url", length = 500)
+    @Lob
+    @Column(name = "poster_url", columnDefinition = "LONGTEXT")
     private String posterUrl;
-
-    @Column(name = "trailer_url", length = 500)
-    private String trailerUrl;
 
     @Column(name = "release_date")
     private LocalDate releaseDate;

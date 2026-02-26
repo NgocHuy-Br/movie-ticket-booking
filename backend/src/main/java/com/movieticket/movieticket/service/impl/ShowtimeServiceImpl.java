@@ -6,6 +6,7 @@ import com.movieticket.movieticket.entity.Movie;
 import com.movieticket.movieticket.entity.Seat;
 import com.movieticket.movieticket.entity.Showtime;
 import com.movieticket.movieticket.entity.Theater;
+import com.movieticket.movieticket.repository.BookingRepository;
 import com.movieticket.movieticket.repository.MovieRepository;
 import com.movieticket.movieticket.repository.SeatRepository;
 import com.movieticket.movieticket.repository.ShowtimeRepository;
@@ -28,9 +29,10 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     private final MovieRepository movieRepository;
     private final TheaterRepository theaterRepository;
     private final SeatRepository seatRepository;
+    private final BookingRepository bookingRepository;
 
     // Cấu hình sơ đồ ghế: 8 hàng (A-H), 10 cột (1-10)
-    private static final String[] ROWS = {"A", "B", "C", "D", "E", "F", "G", "H"};
+    private static final String[] ROWS = { "A", "B", "C", "D", "E", "F", "G", "H" };
     private static final int COLS = 10;
 
     @Override
@@ -87,10 +89,10 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         showtime.setTotalSeats(ROWS.length * COLS);
 
         Showtime savedShowtime = showtimeRepository.save(showtime);
-        
+
         // Tự động tạo ghế cho suất chiếu
         initializeSeatsForShowtime(savedShowtime.getId());
-        
+
         return convertToDto(savedShowtime);
     }
 
@@ -108,7 +110,8 @@ public class ShowtimeServiceImpl implements ShowtimeService {
 
         if (showtimeDto.getTheaterId() != null && !showtimeDto.getTheaterId().equals(showtime.getTheater().getId())) {
             Theater theater = theaterRepository.findById(showtimeDto.getTheaterId())
-                    .orElseThrow(() -> new RuntimeException("Theater not found with id: " + showtimeDto.getTheaterId()));
+                    .orElseThrow(
+                            () -> new RuntimeException("Theater not found with id: " + showtimeDto.getTheaterId()));
             showtime.setTheater(theater);
         }
 
@@ -132,6 +135,10 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         if (!showtimeRepository.existsById(id)) {
             throw new RuntimeException("Showtime not found with id: " + id);
         }
+        // Check if showtime has any bookings
+        if (!bookingRepository.findByShowtimeId(id).isEmpty()) {
+            throw new RuntimeException("Cannot delete showtime that has bookings. Bookings must be cancelled first.");
+        }
         // Xóa tất cả ghế của suất chiếu trước
         seatRepository.deleteAll(seatRepository.findByShowtimeId(id));
         showtimeRepository.deleteById(id);
@@ -142,15 +149,15 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         if (!showtimeRepository.existsById(showtimeId)) {
             throw new RuntimeException("Showtime not found with id: " + showtimeId);
         }
-        
+
         List<Seat> seats = seatRepository.findByShowtimeId(showtimeId);
-        
+
         // Nếu chưa có ghế, tạo mới
         if (seats.isEmpty()) {
             initializeSeatsForShowtime(showtimeId);
             seats = seatRepository.findByShowtimeId(showtimeId);
         }
-        
+
         return seats.stream()
                 .map(this::convertSeatToDto)
                 .collect(Collectors.toList());
@@ -163,7 +170,7 @@ public class ShowtimeServiceImpl implements ShowtimeService {
                 .orElseThrow(() -> new RuntimeException("Showtime not found with id: " + showtimeId));
 
         List<Seat> seats = new ArrayList<>();
-        
+
         for (String row : ROWS) {
             for (int col = 1; col <= COLS; col++) {
                 Seat seat = new Seat();
@@ -173,7 +180,7 @@ public class ShowtimeServiceImpl implements ShowtimeService {
                 seats.add(seat);
             }
         }
-        
+
         seatRepository.saveAll(seats);
     }
 

@@ -3,6 +3,7 @@ package com.movieticket.movieticket.service.impl;
 import com.movieticket.movieticket.dto.MovieDto;
 import com.movieticket.movieticket.entity.Movie;
 import com.movieticket.movieticket.repository.MovieRepository;
+import com.movieticket.movieticket.repository.ShowtimeRepository;
 import com.movieticket.movieticket.service.MovieService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 public class MovieServiceImpl implements MovieService {
 
     private final MovieRepository movieRepository;
+    private final ShowtimeRepository showtimeRepository;
 
     @Override
     public List<MovieDto> getAllMovies() {
@@ -48,9 +50,11 @@ public class MovieServiceImpl implements MovieService {
         Movie movie = new Movie();
         movie.setTitle(movieDto.getTitle());
         movie.setDescription(movieDto.getDescription());
-        movie.setPosterUrl(movieDto.getImageUrl());
-        movie.setAgeRating(movieDto.getAgeRating());
         movie.setDuration(movieDto.getDuration());
+        movie.setGenre(movieDto.getGenre());
+        movie.setAgeRating(movieDto.getAgeRating());
+        movie.setPosterUrl(movieDto.getImageUrl());
+        movie.setReleaseDate(movieDto.getReleaseDate());
         movie.setStatus(Movie.MovieStatus.valueOf(movieDto.getStatus()));
 
         Movie savedMovie = movieRepository.save(movie);
@@ -70,9 +74,11 @@ public class MovieServiceImpl implements MovieService {
 
         movie.setTitle(movieDto.getTitle());
         movie.setDescription(movieDto.getDescription());
-        movie.setPosterUrl(movieDto.getImageUrl());
-        movie.setAgeRating(movieDto.getAgeRating());
         movie.setDuration(movieDto.getDuration());
+        movie.setGenre(movieDto.getGenre());
+        movie.setAgeRating(movieDto.getAgeRating());
+        movie.setPosterUrl(movieDto.getImageUrl());
+        movie.setReleaseDate(movieDto.getReleaseDate());
         movie.setStatus(Movie.MovieStatus.valueOf(movieDto.getStatus()));
 
         Movie updatedMovie = movieRepository.save(movie);
@@ -85,6 +91,10 @@ public class MovieServiceImpl implements MovieService {
         if (!movieRepository.existsById(id)) {
             throw new RuntimeException("Movie not found with id: " + id);
         }
+        // Check if movie has any showtimes
+        if (!showtimeRepository.findByMovieId(id).isEmpty()) {
+            throw new RuntimeException("Cannot delete movie that has showtimes. Please delete all showtimes first.");
+        }
         movieRepository.deleteById(id);
     }
 
@@ -93,9 +103,11 @@ public class MovieServiceImpl implements MovieService {
                 .id(movie.getId())
                 .title(movie.getTitle())
                 .description(movie.getDescription())
-                .imageUrl(movie.getPosterUrl())
-                .ageRating(movie.getAgeRating())
                 .duration(movie.getDuration())
+                .genre(movie.getGenre())
+                .ageRating(movie.getAgeRating())
+                .imageUrl(movie.getPosterUrl())
+                .releaseDate(movie.getReleaseDate())
                 .status(movie.getStatus().name())
                 .build();
     }

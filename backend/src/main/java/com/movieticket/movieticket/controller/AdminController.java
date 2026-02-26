@@ -1,5 +1,6 @@
 package com.movieticket.movieticket.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.movieticket.movieticket.dto.*;
 import com.movieticket.movieticket.entity.Booking;
 import com.movieticket.movieticket.repository.*;
@@ -23,10 +24,12 @@ public class AdminController {
     private final MovieService movieService;
     private final TheaterService theaterService;
     private final ShowtimeService showtimeService;
+    private final GenreService genreService;
     private final UserRepository userRepository;
     private final BookingRepository bookingRepository;
     private final MovieRepository movieRepository;
     private final TheaterRepository theaterRepository;
+    private final ObjectMapper objectMapper;
 
     // ==================== MOVIES MANAGEMENT ====================
 
@@ -59,6 +62,76 @@ public class AdminController {
         try {
             movieService.deleteMovie(id);
             return ResponseEntity.ok(ApiResponse.success("Movie deleted successfully", null));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    // ==================== GENRES MANAGEMENT ====================
+
+    @GetMapping("/genres")
+    public ResponseEntity<ApiResponse<List<GenreDto>>> getAllGenres() {
+        try {
+            List<GenreDto> genres = genreService.getAllGenres();
+            return ResponseEntity.ok(ApiResponse.success("Genres retrieved successfully", genres));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @GetMapping("/genres/active")
+    public ResponseEntity<ApiResponse<List<GenreDto>>> getActiveGenres() {
+        try {
+            List<GenreDto> genres = genreService.getActiveGenres();
+            return ResponseEntity.ok(ApiResponse.success("Active genres retrieved successfully", genres));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @GetMapping("/genres/{id}")
+    public ResponseEntity<ApiResponse<GenreDto>> getGenreById(@PathVariable Long id) {
+        try {
+            GenreDto genre = genreService.getGenreById(id);
+            return ResponseEntity.ok(ApiResponse.success("Genre retrieved successfully", genre));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/genres")
+    public ResponseEntity<ApiResponse<GenreDto>> createGenre(@RequestBody GenreDto genreDto) {
+        try {
+            GenreDto created = genreService.createGenre(genreDto);
+            return ResponseEntity.ok(ApiResponse.success("Genre created successfully", created));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PutMapping("/genres/{id}")
+    public ResponseEntity<ApiResponse<GenreDto>> updateGenre(
+            @PathVariable Long id,
+            @RequestBody GenreDto genreDto) {
+        try {
+            GenreDto updated = genreService.updateGenre(id, genreDto);
+            return ResponseEntity.ok(ApiResponse.success("Genre updated successfully", updated));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/genres/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteGenre(@PathVariable Long id) {
+        try {
+            genreService.deleteGenre(id);
+            return ResponseEntity.ok(ApiResponse.success("Genre deleted successfully", null));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error(e.getMessage()));
@@ -224,6 +297,205 @@ public class AdminController {
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Failed to retrieve statistics: " + e.getMessage()));
+        }
+    }
+
+    // ==================== USER MANAGEMENT ====================
+
+    @GetMapping("/users")
+    public ResponseEntity<ApiResponse<List<UserDto>>> getAllUsers() {
+        try {
+            List<UserDto> users = userRepository.findAll().stream()
+                    .map(user -> UserDto.builder()
+                            .id(user.getId())
+                            .cmnd(user.getCmnd())
+                            .name(user.getName())
+                            .birthDate(user.getBirthDate())
+                            .phone(user.getPhone())
+                            .address(user.getAddress())
+                            .email(user.getEmail())
+                            .username(user.getUsername())
+                            .avatar(user.getAvatar())
+                            .role(user.getRole().name())
+                            .membershipLevel(user.getMembershipLevel().name())
+                            .points(user.getPoints())
+                            .accountBalance(user.getAccountBalance())
+                            .createdAt(user.getCreatedAt())
+                            .updatedAt(user.getUpdatedAt())
+                            .build())
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(ApiResponse.success("Get all users successfully", users));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to get users: " + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/users/{id}/role")
+    public ResponseEntity<ApiResponse<UserDto>> updateUserRole(
+            @PathVariable Long id,
+            @RequestParam String role) {
+        try {
+            // Validate role enum
+            com.movieticket.movieticket.entity.User.Role roleEnum;
+            try {
+                roleEnum = com.movieticket.movieticket.entity.User.Role.valueOf(role);
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Invalid role. Must be USER or ADMIN"));
+            }
+
+            var user = userRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            user.setRole(roleEnum);
+            userRepository.save(user);
+
+            UserDto userDto = UserDto.builder()
+                    .id(user.getId())
+                    .cmnd(user.getCmnd())
+                    .name(user.getName())
+                    .birthDate(user.getBirthDate())
+                    .phone(user.getPhone())
+                    .address(user.getAddress())
+                    .email(user.getEmail())
+                    .username(user.getUsername())
+                    .avatar(user.getAvatar())
+                    .role(user.getRole().name())
+                    .membershipLevel(user.getMembershipLevel().name())
+                    .points(user.getPoints())
+                    .accountBalance(user.getAccountBalance())
+                    .createdAt(user.getCreatedAt())
+                    .updatedAt(user.getUpdatedAt())
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.success("User role updated successfully", userDto));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to update user role: " + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/users/{id}/membership")
+    public ResponseEntity<ApiResponse<UserDto>> updateUserMembership(
+            @PathVariable Long id,
+            @RequestParam String membershipLevel) {
+        try {
+            // Validate membership level enum
+            com.movieticket.movieticket.entity.User.MembershipLevel membershipEnum;
+            try {
+                membershipEnum = com.movieticket.movieticket.entity.User.MembershipLevel.valueOf(membershipLevel);
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Invalid membership level. Must be NORMAL, GOLD, or PLATINUM"));
+            }
+
+            var user = userRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            user.setMembershipLevel(membershipEnum);
+            userRepository.save(user);
+
+            UserDto userDto = UserDto.builder()
+                    .id(user.getId())
+                    .cmnd(user.getCmnd())
+                    .name(user.getName())
+                    .birthDate(user.getBirthDate())
+                    .phone(user.getPhone())
+                    .address(user.getAddress())
+                    .email(user.getEmail())
+                    .username(user.getUsername())
+                    .avatar(user.getAvatar())
+                    .role(user.getRole().name())
+                    .membershipLevel(user.getMembershipLevel().name())
+                    .points(user.getPoints())
+                    .accountBalance(user.getAccountBalance())
+                    .createdAt(user.getCreatedAt())
+                    .updatedAt(user.getUpdatedAt())
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.success("User membership updated successfully", userDto));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to update user membership: " + e.getMessage()));
+        }
+    }
+
+    // ==================== BOOKING MANAGEMENT ====================
+
+    @GetMapping("/bookings")
+    public ResponseEntity<ApiResponse<List<BookingDto>>> getAllBookings() {
+        try {
+            List<BookingDto> bookings = bookingRepository.findAll().stream()
+                    .map(booking -> {
+                        try {
+                            List<String> seatsList = objectMapper.readValue(booking.getSeats(), List.class);
+                            return BookingDto.builder()
+                                    .id(booking.getId())
+                                    .ticketCode(booking.getTicketCode())
+                                    .userId(booking.getUser().getId())
+                                    .userName(booking.getUser().getName())
+                                    .movieId(booking.getMovie().getId())
+                                    .movieTitle(booking.getMovie().getTitle())
+                                    .theaterId(booking.getTheater().getId())
+                                    .theaterName(booking.getTheater().getName())
+                                    .showtimeId(booking.getShowtime().getId())
+                                    .showDate(booking.getShowtime().getShowDate())
+                                    .showTime(booking.getShowtime().getShowTime())
+                                    .seats(seatsList)
+                                    .numberOfSeats(seatsList.size())
+                                    .totalPrice(booking.getTotalAmount())
+                                    .status(booking.getStatus().name())
+                                    .canCancel(false) // Admin view - không cho cancel từ đây
+                                    .bookingDate(booking.getCreatedAt())
+                                    .build();
+                        } catch (Exception e) {
+                            throw new RuntimeException("Failed to parse seats: " + e.getMessage());
+                        }
+                    })
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(ApiResponse.success("Get all bookings successfully", bookings));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to get bookings: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/bookings/search")
+    public ResponseEntity<ApiResponse<BookingDto>> searchBookingByTicketCode(@RequestParam String ticketCode) {
+        try {
+            var booking = bookingRepository.findByTicketCode(ticketCode)
+                    .orElseThrow(() -> new RuntimeException("Booking not found with ticket code: " + ticketCode));
+
+            List<String> seatsList = objectMapper.readValue(booking.getSeats(), List.class);
+
+            BookingDto bookingDto = BookingDto.builder()
+                    .id(booking.getId())
+                    .ticketCode(booking.getTicketCode())
+                    .userId(booking.getUser().getId())
+                    .userName(booking.getUser().getName())
+                    .movieId(booking.getMovie().getId())
+                    .movieTitle(booking.getMovie().getTitle())
+                    .theaterId(booking.getTheater().getId())
+                    .theaterName(booking.getTheater().getName())
+                    .showtimeId(booking.getShowtime().getId())
+                    .showDate(booking.getShowtime().getShowDate())
+                    .showTime(booking.getShowtime().getShowTime())
+                    .seats(seatsList)
+                    .numberOfSeats(seatsList.size())
+                    .totalPrice(booking.getTotalAmount())
+                    .status(booking.getStatus().name())
+                    .canCancel(false)
+                    .bookingDate(booking.getCreatedAt())
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.success("Booking found", bookingDto));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(ApiResponse.error("Server error: " + e.getMessage()));
         }
     }
 }

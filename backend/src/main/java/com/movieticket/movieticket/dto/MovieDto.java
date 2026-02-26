@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -13,8 +15,10 @@ public class MovieDto {
     private Long id;
     private String title;
     private String description;
-    private String imageUrl;
-    private String ageRating;
     private Integer duration;
+    private String genre;
+    private String ageRating;
+    private String imageUrl; // posterUrl
+    private LocalDate releaseDate;
     private String status;
 }
