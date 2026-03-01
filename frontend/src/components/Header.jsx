@@ -61,7 +61,17 @@ const Header = () => {
   };
 
   const handleAccountClick = () => {
-    navigate('/account');
+    navigate('/account', { state: { activeTab: 'profile' } });
+    setShowDropdown(false);
+  };
+
+  const handleMyMovies = () => {
+    navigate('/account', { state: { activeTab: 'movies' } });
+    setShowDropdown(false);
+  };
+
+  const handleMyWallet = () => {
+    navigate('/account', { state: { activeTab: 'wallet' } });
     setShowDropdown(false);
   };
 
@@ -145,6 +155,20 @@ const Header = () => {
                       <path d="M12 11C14.2091 11 16 9.20914 16 7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7C8 9.20914 9.79086 11 12 11Z" stroke="currentColor" strokeWidth="2" />
                     </svg>
                     Tài khoản của tôi
+                  </button>
+                  <button className="dropdown-item" onClick={handleMyMovies}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <rect x="2" y="7" width="20" height="15" rx="2" ry="2" stroke="currentColor" strokeWidth="2" />
+                      <polyline points="17 2 12 7 7 2" stroke="currentColor" strokeWidth="2" />
+                    </svg>
+                    Phim của tôi
+                  </button>
+                  <button className="dropdown-item" onClick={handleMyWallet}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <rect x="1" y="4" width="22" height="16" rx="2" ry="2" stroke="currentColor" strokeWidth="2" />
+                      <line x1="1" y1="10" x2="23" y2="10" stroke="currentColor" strokeWidth="2" />
+                    </svg>
+                    Ví của tôi
                   </button>
                   <div className="dropdown-divider"></div>
                   <button className="dropdown-item logout" onClick={handleLogout}>

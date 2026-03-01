@@ -15,6 +15,54 @@
   margin: 0;
 }
 
+/* Tab Navigation */
+.account-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: white;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-btn svg {
+  transition: transform 0.2s;
+}
+
+.tab-btn:hover {
+  border-color: #e50914;
+  color: #e50914;
+  transform: translateY(-2px);
+}
+
+.tab-btn:hover svg {
+  transform: scale(1.1);
+}
+
+.tab-btn.active {
+  background: #e50914;
+  color: white;
+  border-color: #e50914;
+}
+
+.tab-btn.active svg {
+  stroke: white;
+}
+
 .account-content-single {
   max-width: 750px;
   margin: 0 auto;

@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Header from './Header';
+import MyMovies from './MyMovies';
+import MyWallet from './MyWallet';
 import { getUserInfo, updateUserInfo } from '../utils/auth';
 import './Account.css';
 
 const Account = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'profile'); // profile, movies, wallet
   const [userInfo, setUserInfo] = useState(null);
   const [avatar, setAvatar] = useState(null);
   const [pendingAvatar, setPendingAvatar] = useState(null); // Avatar mới chọn chưa lưu
@@ -46,6 +50,11 @@ const Account = () => {
       navigate('/');
     }
 
+    // Update activeTab when location.state changes
+    if (location.state?.activeTab) {
+      setActiveTab(location.state.activeTab);
+    }
+
     // Listen for logout event
     const handleLogout = () => navigate('/');
     window.addEventListener('userLogout', handleLogout);
@@ -63,7 +72,7 @@ const Account = () => {
       window.removeEventListener('userLogout', handleLogout);
       window.removeEventListener('userProfileUpdate', handleProfileUpdate);
     };
-  }, [navigate]);
+  }, [navigate, location.state]);
 
   // Hàm compress và resize ảnh
   const compressImage = (file) => {
@@ -345,176 +354,193 @@ const Account = () => {
       <Header />
       <div className="account-container">
         <div className="account-header">
-          <h1>Tài Khoản</h1>
+          <h1>
+            {activeTab === 'profile' && 'Tài Khoản'}
+            {activeTab === 'movies' && 'Phim Của Tôi'}
+            {activeTab === 'wallet' && 'Ví Của Tôi'}
+          </h1>
         </div>
 
-        <div className="account-content-single">
-          <div className="content-card">
-            <div className="card-header">
-              <h2>Thông Tin Cá Nhân</h2>
-            </div>
+        {/* Tab Content */}
+        {activeTab === 'profile' && (
+          <div className="account-content-single">
+            <div className="content-card">
+              <div className="card-header">
+                <h2>Thông Tin Cá Nhân</h2>
+              </div>
 
-            <div className="profile-content">
-              <div className="avatar-section">
-                <div className="avatar-container">
-                  {(pendingAvatar || avatar) ? (
-                    <img src={pendingAvatar || avatar} alt="Avatar" className="avatar-image" />
+              <div className="profile-content">
+                <div className="avatar-section">
+                  <div className="avatar-container">
+                    {(pendingAvatar || avatar) ? (
+                      <img src={pendingAvatar || avatar} alt="Avatar" className="avatar-image" />
+                    ) : (
+                      <svg className="avatar-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M20.59 22C20.59 18.13 16.74 15 12 15C7.26 15 3.41 18.13 3.41 22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                    {pendingAvatar && (
+                      <div className="avatar-pending-badge">Chưa lưu</div>
+                    )}
+                  </div>
+
+                  {!pendingAvatar ? (
+                    <label className="upload-btn">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarChange}
+                        style={{ display: 'none' }}
+                      />
+                      {avatar ? 'Đổi ảnh đại diện' : 'Tải ảnh đại diện'}
+                    </label>
                   ) : (
-                    <svg className="avatar-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      <path d="M20.59 22C20.59 18.13 16.74 15 12 15C7.26 15 3.41 18.13 3.41 22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                  {pendingAvatar && (
-                    <div className="avatar-pending-badge">Chưa lưu</div>
+                    <div className="avatar-actions">
+                      <button
+                        className="save-avatar-btn"
+                        onClick={handleSaveAvatar}
+                        disabled={isSavingAvatar}
+                      >
+                        {isSavingAvatar ? 'Đang lưu...' : 'Lưu ảnh'}
+                      </button>
+                      <button
+                        className="cancel-avatar-btn"
+                        onClick={handleCancelAvatar}
+                        disabled={isSavingAvatar}
+                      >
+                        Hủy
+                      </button>
+                    </div>
                   )}
                 </div>
 
-                {!pendingAvatar ? (
-                  <label className="upload-btn">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleAvatarChange}
-                      style={{ display: 'none' }}
-                    />
-                    {avatar ? 'Đổi ảnh đại diện' : 'Tải ảnh đại diện'}
-                  </label>
+                {!isEditing ? (
+                  <div className="profile-info">
+                    <div className="info-item">
+                      <span className="label">Tên đăng nhập:</span>
+                      <span className="value">{userInfo.username}</span>
+                    </div>
+                    <div className="info-item">
+                      <span className="label">Họ và tên:</span>
+                      <span className="value">{userInfo.fullName || 'Chưa cập nhật'}</span>
+                    </div>
+                    <div className="info-item">
+                      <span className="label">Email:</span>
+                      <span className="value">{userInfo.email || 'Chưa cập nhật'}</span>
+                    </div>
+                    <div className="info-item">
+                      <span className="label">Số điện thoại:</span>
+                      <span className="value">{userInfo.phone || 'Chưa cập nhật'}</span>
+                    </div>
+                    <div className="info-item">
+                      <span className="label">Ngày sinh:</span>
+                      <span className="value">{userInfo.dateOfBirth || 'Chưa cập nhật'}</span>
+                    </div>
+                    <div className="info-item">
+                      <span className="label">Vai trò:</span>
+                      <span className="value">{userInfo.role === 'ADMIN' ? 'Quản trị viên' : 'Người dùng'}</span>
+                    </div>
+                    <div className="info-item">
+                      <span className="label">Mật khẩu:</span>
+                      <div className="password-display">
+                        <span className="value password-stars">••••••••</span>
+                        <button className="change-password-link" onClick={() => setIsChangingPassword(true)}>
+                          Thay đổi
+                        </button>
+                      </div>
+                    </div>
+                    {userInfo.role !== 'ADMIN' && userInfo.membershipLevel && (
+                      <div className="info-item">
+                        <span className="label">Hạng thành viên:</span>
+                        <span className={`value membership-badge ${userInfo.membershipLevel.toLowerCase()}`}>
+                          {userInfo.membershipLevel}
+                        </span>
+                      </div>
+                    )}
+                    {!isEditing && (
+                      <div className="edit-button-container">
+                        <button className="edit-btn" onClick={handleEditClick}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          </svg>
+                          Chỉnh sửa
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 ) : (
-                  <div className="avatar-actions">
-                    <button
-                      className="save-avatar-btn"
-                      onClick={handleSaveAvatar}
-                      disabled={isSavingAvatar}
-                    >
-                      {isSavingAvatar ? 'Đang lưu...' : 'Lưu ảnh'}
-                    </button>
-                    <button
-                      className="cancel-avatar-btn"
-                      onClick={handleCancelAvatar}
-                      disabled={isSavingAvatar}
-                    >
-                      Hủy
-                    </button>
+                  <div className="profile-edit-form">
+                    <div className="form-group">
+                      <label>Tên đăng nhập:</label>
+                      <input type="text" value={userInfo.username} disabled />
+                    </div>
+                    <div className="form-group">
+                      <label>Họ và tên:</label>
+                      <input
+                        type="text"
+                        name="fullName"
+                        value={editForm.fullName}
+                        onChange={handleInputChange}
+                        placeholder="Nhập họ và tên"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Email:</label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={editForm.email}
+                        onChange={handleInputChange}
+                        placeholder="Nhập email"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Số điện thoại:</label>
+                      <input
+                        type="tel"
+                        name="phone"
+                        value={editForm.phone}
+                        onChange={handleInputChange}
+                        placeholder="Nhập số điện thoại (10 số, bắt đầu bằng 0)"
+                        pattern="^0\d{9}$"
+                        maxLength="10"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Ngày sinh:</label>
+                      <input
+                        type="date"
+                        name="dateOfBirth"
+                        value={editForm.dateOfBirth}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className="form-actions">
+                      <button className="cancel-btn" onClick={handleCancelEdit}>
+                        Hủy
+                      </button>
+                      <button className="save-btn" onClick={handleSaveProfile}>
+                        Lưu thay đổi
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
-
-              {!isEditing ? (
-                <div className="profile-info">
-                  <div className="info-item">
-                    <span className="label">Tên đăng nhập:</span>
-                    <span className="value">{userInfo.username}</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="label">Họ và tên:</span>
-                    <span className="value">{userInfo.fullName || 'Chưa cập nhật'}</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="label">Email:</span>
-                    <span className="value">{userInfo.email || 'Chưa cập nhật'}</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="label">Số điện thoại:</span>
-                    <span className="value">{userInfo.phone || 'Chưa cập nhật'}</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="label">Ngày sinh:</span>
-                    <span className="value">{userInfo.dateOfBirth || 'Chưa cập nhật'}</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="label">Vai trò:</span>
-                    <span className="value">{userInfo.role === 'ADMIN' ? 'Quản trị viên' : 'Người dùng'}</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="label">Mật khẩu:</span>
-                    <div className="password-display">
-                      <span className="value password-stars">••••••••</span>
-                      <button className="change-password-link" onClick={() => setIsChangingPassword(true)}>
-                        Thay đổi
-                      </button>
-                    </div>
-                  </div>
-                  {userInfo.role !== 'ADMIN' && userInfo.membershipLevel && (
-                    <div className="info-item">
-                      <span className="label">Hạng thành viên:</span>
-                      <span className={`value membership-badge ${userInfo.membershipLevel.toLowerCase()}`}>
-                        {userInfo.membershipLevel}
-                      </span>
-                    </div>
-                  )}
-                  {!isEditing && (
-                    <div className="edit-button-container">
-                      <button className="edit-btn" onClick={handleEditClick}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                        </svg>
-                        Chỉnh sửa
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="profile-edit-form">
-                  <div className="form-group">
-                    <label>Tên đăng nhập:</label>
-                    <input type="text" value={userInfo.username} disabled />
-                  </div>
-                  <div className="form-group">
-                    <label>Họ và tên:</label>
-                    <input
-                      type="text"
-                      name="fullName"
-                      value={editForm.fullName}
-                      onChange={handleInputChange}
-                      placeholder="Nhập họ và tên"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Email:</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={editForm.email}
-                      onChange={handleInputChange}
-                      placeholder="Nhập email"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Số điện thoại:</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={editForm.phone}
-                      onChange={handleInputChange}
-                      placeholder="Nhập số điện thoại (10 số, bắt đầu bằng 0)"
-                      pattern="^0\d{9}$"
-                      maxLength="10"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Ngày sinh:</label>
-                    <input
-                      type="date"
-                      name="dateOfBirth"
-                      value={editForm.dateOfBirth}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="form-actions">
-                    <button className="cancel-btn" onClick={handleCancelEdit}>
-                      Hủy
-                    </button>
-                    <button className="save-btn" onClick={handleSaveProfile}>
-                      Lưu thay đổi
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
-        </div>
+        )}
+
+        {/* My Movies Tab */}
+        {activeTab === 'movies' && (
+          <MyMovies />
+        )}
+
+        {/* My Wallet Tab */}
+        {activeTab === 'wallet' && (
+          <MyWallet />
+        )}
       </div>
 
       {/* Modal Thay đổi Mật khẩu */}

@@ -3,6 +3,7 @@ package com.movieticket.movieticket.controller;
 import com.movieticket.movieticket.dto.ApiResponse;
 import com.movieticket.movieticket.dto.BookingDto;
 import com.movieticket.movieticket.dto.BookingRequest;
+import com.movieticket.movieticket.entity.Booking;
 import com.movieticket.movieticket.service.BookingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -37,8 +38,30 @@ public class BookingController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<BookingDto>>> getUserBookings(Authentication authentication) {
+    public ResponseEntity<ApiResponse<List<BookingDto>>> getUserBookings(
+            Authentication authentication,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder) {
         String username = authentication.getName();
+
+        // If filters are provided, use filtered method
+        if (status != null || sortBy != null) {
+            Booking.BookingStatus bookingStatus = null;
+            if (status != null && !status.isEmpty()) {
+                try {
+                    bookingStatus = Booking.BookingStatus.valueOf(status.toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    return ResponseEntity.badRequest()
+                            .body(ApiResponse.error("Invalid status value: " + status));
+                }
+            }
+            List<BookingDto> bookings = bookingService.getUserBookingsWithFilters(username, bookingStatus, sortBy,
+                    sortOrder);
+            return ResponseEntity.ok(ApiResponse.success("Get user bookings successfully", bookings));
+        }
+
+        // Otherwise use default method
         List<BookingDto> bookings = bookingService.getUserBookings(username);
         return ResponseEntity.ok(ApiResponse.success("Get user bookings successfully", bookings));
     }

@@ -7,6 +7,7 @@ import com.movieticket.movieticket.dto.BookingRequest;
 import com.movieticket.movieticket.entity.*;
 import com.movieticket.movieticket.repository.*;
 import com.movieticket.movieticket.service.BookingService;
+import com.movieticket.movieticket.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +29,7 @@ public class BookingServiceImpl implements BookingService {
     private final ShowtimeRepository showtimeRepository;
     private final SeatRepository seatRepository;
     private final PaymentHistoryRepository paymentHistoryRepository;
+    private final WalletService walletService;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -115,6 +117,15 @@ public class BookingServiceImpl implements BookingService {
         payment.setPaymentDate(LocalDateTime.now());
         paymentHistoryRepository.save(payment);
 
+        // Tạo transaction nếu thanh toán bằng Movie account
+        if ("movie".equalsIgnoreCase(request.getPaymentMethod())) {
+            String description = String.format("Thanh toán vé %s - %s - %d ghế",
+                    showtime.getMovie().getTitle(),
+                    ticketCode,
+                    bookedSeats);
+            walletService.createBookingPaymentTransaction(user.getId(), savedBooking.getId(), totalPrice, description);
+        }
+
         return convertToDto(savedBooking);
     }
 
@@ -124,6 +135,44 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         return bookingRepository.findByUserIdOrderByCreatedAtDesc(user.getId()).stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<BookingDto> getUserBookingsWithFilters(String username, Booking.BookingStatus status, String sortBy,
+            String sortOrder) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<Booking> bookings = bookingRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
+
+        // Filter by status
+        if (status != null) {
+            bookings = bookings.stream()
+                    .filter(b -> b.getStatus() == status)
+                    .collect(Collectors.toList());
+        }
+
+        // Sort
+        if (sortBy != null && !sortBy.isEmpty()) {
+            if ("showDate".equalsIgnoreCase(sortBy)) {
+                bookings.sort((b1, b2) -> {
+                    int comparison = b1.getShowtime().getShowDate().compareTo(b2.getShowtime().getShowDate());
+                    if (comparison == 0) {
+                        comparison = b1.getShowtime().getShowTime().compareTo(b2.getShowtime().getShowTime());
+                    }
+                    return "desc".equalsIgnoreCase(sortOrder) ? -comparison : comparison;
+                });
+            } else if ("bookingDate".equalsIgnoreCase(sortBy)) {
+                bookings.sort((b1, b2) -> {
+                    int comparison = b1.getCreatedAt().compareTo(b2.getCreatedAt());
+                    return "desc".equalsIgnoreCase(sortOrder) ? -comparison : comparison;
+                });
+            }
+        }
+
+        return bookings.stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
@@ -225,6 +274,12 @@ public class BookingServiceImpl implements BookingService {
             refund.setStatus(PaymentHistory.PaymentStatus.COMPLETED);
             refund.setPaymentDate(LocalDateTime.now());
             paymentHistoryRepository.save(refund);
+
+            // Tạo transaction hoàn tiền
+            String description = String.format("Hoàn tiền hủy vé %s - %s",
+                    booking.getMovie().getTitle(),
+                    booking.getTicketCode());
+            walletService.createRefundTransaction(user.getId(), booking.getId(), booking.getTotalAmount(), description);
         }
 
         bookingRepository.save(booking);
