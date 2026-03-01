@@ -176,6 +176,8 @@ public class ShowtimeServiceImpl implements ShowtimeService {
                 Seat seat = new Seat();
                 seat.setShowtime(showtime);
                 seat.setSeatNumber(row + col);
+                seat.setRowLabel(row);
+                seat.setColumnNumber(col);
                 seat.setStatus(Seat.SeatStatus.AVAILABLE);
                 seats.add(seat);
             }
