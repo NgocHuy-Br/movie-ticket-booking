@@ -41,7 +41,7 @@ public class UserServiceImpl implements UserService {
                 throw new RuntimeException("Email không hợp lệ");
             }
             // Check if email already exists for another user
-            if (!user.getEmail().equals(profileDto.getEmail()) &&
+            if ((user.getEmail() == null || !profileDto.getEmail().equals(user.getEmail())) &&
                     userRepository.existsByEmail(profileDto.getEmail())) {
                 throw new RuntimeException("Email đã tồn tại");
             }
@@ -53,7 +53,7 @@ public class UserServiceImpl implements UserService {
                 throw new RuntimeException("Số điện thoại phải là 10 chữ số, bắt đầu bằng 0");
             }
             // Check if phone already exists for another user
-            if (!user.getPhone().equals(profileDto.getPhone()) &&
+            if ((user.getPhone() == null || !profileDto.getPhone().equals(user.getPhone())) &&
                     userRepository.existsByPhone(profileDto.getPhone())) {
                 throw new RuntimeException("Số điện thoại đã tồn tại");
             }

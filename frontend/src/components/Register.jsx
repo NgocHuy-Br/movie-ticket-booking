@@ -11,6 +11,8 @@ const Register = () => {
     ten: '',
     sinhNhat: '',
     soDienThoai: '',
+    email: '',
+    diaChi: '',
     username: '',
     password: '',
     confirmPassword: ''
@@ -53,6 +55,11 @@ const Register = () => {
       newErrors.soDienThoai = 'Số điện thoại phải là 10 chữ số, bắt đầu bằng 0';
     }
 
+    // Email: không bắt buộc, nhưng nếu nhập thì phải đúng format
+    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Email không hợp lệ';
+    }
+
     // Username: bắt buộc
     if (!formData.username.trim()) {
       newErrors.username = 'Username là bắt buộc';
@@ -89,6 +96,8 @@ const Register = () => {
             fullName: formData.ten,
             dateOfBirth: formData.sinhNhat,
             phone: formData.soDienThoai,
+            email: formData.email.trim() || null,
+            address: formData.diaChi.trim() || null,
             username: formData.username,
             password: formData.password,
           }),
@@ -171,6 +180,32 @@ const Register = () => {
           </div>
 
           <div className="form-group">
+            <label htmlFor="email">Email</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="Nhập email (không bắt buộc)"
+            />
+            {errors.email && <span className="error">{errors.email}</span>}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="diaChi">Địa Chỉ</label>
+            <input
+              type="text"
+              id="diaChi"
+              name="diaChi"
+              value={formData.diaChi}
+              onChange={handleChange}
+              placeholder="Nhập địa chỉ (không bắt buộc)"
+            />
+            {errors.diaChi && <span className="error">{errors.diaChi}</span>}
+          </div>
+
+          <div className="form-group">
             <label htmlFor="username">Username Đăng Nhập <span className="required">*</span></label>
             <input
               type="text"
@@ -207,6 +242,10 @@ const Register = () => {
               placeholder="Nhập lại mật khẩu"
             />
             {errors.confirmPassword && <span className="error">{errors.confirmPassword}</span>}
+          </div>
+
+          <div className="form-note">
+            <span className="required">*</span> Thông tin bắt buộc nhập
           </div>
 
           <button type="submit">Đăng Ký</button>

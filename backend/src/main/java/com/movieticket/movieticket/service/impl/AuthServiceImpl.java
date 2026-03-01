@@ -34,7 +34,8 @@ public class AuthServiceImpl implements AuthService {
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new RuntimeException("Username đã tồn tại");
         }
-        if (userRepository.existsByEmail(request.getEmail())) {
+        if (request.getEmail() != null && !request.getEmail().trim().isEmpty()
+                && userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email đã tồn tại");
         }
         if (userRepository.existsByCmnd(request.getCmnd())) {
@@ -108,8 +109,10 @@ public class AuthServiceImpl implements AuthService {
                 .id(user.getId())
                 .username(user.getUsername())
                 .name(user.getName())
+                .fullName(user.getName())
                 .email(user.getEmail())
                 .phone(user.getPhone())
+                .dateOfBirth(user.getBirthDate() != null ? user.getBirthDate().toString() : null)
                 .avatar(user.getAvatar())
                 .role(user.getRole().name())
                 .membershipLevel(user.getMembershipLevel() != null ? user.getMembershipLevel().name() : null)

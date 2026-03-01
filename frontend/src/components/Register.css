@@ -47,6 +47,13 @@
   color: red;
 }
 
+.form-note {
+  color: #666;
+  font-size: 14px;
+  margin: 15px 0;
+  font-style: italic;
+}
+
 .error {
   color: red;
   font-size: 14px;
