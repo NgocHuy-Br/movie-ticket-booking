@@ -15,7 +15,8 @@ import java.time.LocalTime;
 @Entity
 @Table(name = "showtimes", indexes = {
         @Index(name = "idx_show_date_time", columnList = "show_date, show_time"),
-        @Index(name = "idx_movie_theater", columnList = "movie_id, theater_id")
+        @Index(name = "idx_movie_theater", columnList = "movie_id, theater_id"),
+        @Index(name = "idx_room_date", columnList = "room_id, show_date")
 })
 @Data
 @NoArgsConstructor
@@ -34,8 +35,9 @@ public class Showtime {
     @JoinColumn(name = "theater_id", nullable = false)
     private Theater theater;
 
-    @Column(name = "room_number")
-    private Integer roomNumber = 1;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "room_id", nullable = false)
+    private CinemaRoom room;
 
     @Column(name = "show_date", nullable = false)
     private LocalDate showDate;

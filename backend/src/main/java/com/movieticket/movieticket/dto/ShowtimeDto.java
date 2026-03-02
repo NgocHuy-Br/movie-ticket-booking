@@ -19,6 +19,8 @@ public class ShowtimeDto {
     private String movieTitle;
     private Long theaterId;
     private String theaterName;
+    private Long roomId;
+    private String roomName;
     private LocalDate showDate;
     private LocalTime showTime;
     private BigDecimal price;

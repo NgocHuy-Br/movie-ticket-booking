@@ -16,7 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/showtimes")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"})
+@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:3000" })
 public class ShowtimeController {
 
     private final ShowtimeService showtimeService;
@@ -26,9 +26,9 @@ public class ShowtimeController {
             @RequestParam(required = false) Long movieId,
             @RequestParam(required = false) Long theaterId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        
+
         List<ShowtimeDto> showtimes;
-        
+
         if (movieId != null && theaterId != null) {
             showtimes = showtimeService.getShowtimesByMovieAndTheater(movieId, theaterId);
         } else if (movieId != null && date != null) {
@@ -38,7 +38,7 @@ public class ShowtimeController {
         } else {
             showtimes = showtimeService.getAllShowtimes();
         }
-        
+
         return ResponseEntity.ok(ApiResponse.success("Get showtimes successfully", showtimes));
     }
 
@@ -60,6 +60,18 @@ public class ShowtimeController {
             return ResponseEntity.ok(ApiResponse.success("Get seats successfully", seats));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/initialize-seats")
+    public ResponseEntity<ApiResponse<String>> initializeSeatsForShowtime(@PathVariable Long id) {
+        try {
+            showtimeService.initializeSeatsForShowtime(id);
+            return ResponseEntity
+                    .ok(ApiResponse.success("Seats initialized successfully", "Seats have been created for showtime"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(e.getMessage()));
         }
     }

@@ -69,15 +69,11 @@ public class SystemSettingsServiceImpl implements SystemSettingsService {
     @Transactional
     public void initializeDefaultSettings() {
         Map<String, String> defaultSettings = new HashMap<>();
-        defaultSettings.put("TOTAL_ROWS", "10");
-        defaultSettings.put("SEATS_PER_ROW", "8");
         defaultSettings.put("MAX_TICKETS_PER_BOOKING", "10");
         defaultSettings.put("SEAT_HOLD_MINUTES", "10");
         defaultSettings.put("MIN_GAP_BETWEEN_SHOWS", "30");
 
         Map<String, String> descriptions = new HashMap<>();
-        descriptions.put("TOTAL_ROWS", "Số hàng ghế mỗi phòng chiếu");
-        descriptions.put("SEATS_PER_ROW", "Số ghế mỗi hàng");
         descriptions.put("MAX_TICKETS_PER_BOOKING", "Số vé tối đa mỗi lần đặt");
         descriptions.put("SEAT_HOLD_MINUTES", "Thời gian giữ ghế (phút)");
         descriptions.put("MIN_GAP_BETWEEN_SHOWS", "Khoảng cách tối thiểu giữa các suất chiếu (phút)");

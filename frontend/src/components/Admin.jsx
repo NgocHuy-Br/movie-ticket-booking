@@ -1603,7 +1603,18 @@ const Admin = () => {
 
             {/* Theater Modal */}
             {showTheaterModal && (
-                <div className="modal-overlay" onClick={closeTheaterModal}>
+                <div className="modal-overlay"
+                    onMouseDown={(e) => {
+                        if (e.target === e.currentTarget) {
+                            e.currentTarget.dataset.mousedownOnOverlay = 'true';
+                        }
+                    }}
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget && e.currentTarget.dataset.mousedownOnOverlay === 'true') {
+                            closeTheaterModal();
+                        }
+                        delete e.currentTarget.dataset.mousedownOnOverlay;
+                    }}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2>{isEditMode ? '✏️ Chỉnh sửa rạp' : '➕ Thêm rạp mới'}</h2>
@@ -1684,7 +1695,18 @@ const Admin = () => {
 
             {/* Movie Modal */}
             {showMovieModal && (
-                <div className="modal-overlay" onClick={closeMovieModal}>
+                <div className="modal-overlay"
+                    onMouseDown={(e) => {
+                        if (e.target === e.currentTarget) {
+                            e.currentTarget.dataset.mousedownOnOverlay = 'true';
+                        }
+                    }}
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget && e.currentTarget.dataset.mousedownOnOverlay === 'true') {
+                            closeMovieModal();
+                        }
+                        delete e.currentTarget.dataset.mousedownOnOverlay;
+                    }}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2>{isEditModeMovie ? '✏️ Chỉnh sửa phim' : '➕ Thêm phim mới'}</h2>
@@ -1848,7 +1870,18 @@ const Admin = () => {
 
             {/* Showtime Modal */}
             {showShowtimeModal && (
-                <div className="modal-overlay" onClick={closeShowtimeModal}>
+                <div className="modal-overlay"
+                    onMouseDown={(e) => {
+                        if (e.target === e.currentTarget) {
+                            e.currentTarget.dataset.mousedownOnOverlay = 'true';
+                        }
+                    }}
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget && e.currentTarget.dataset.mousedownOnOverlay === 'true') {
+                            closeShowtimeModal();
+                        }
+                        delete e.currentTarget.dataset.mousedownOnOverlay;
+                    }}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2>{isEditModeShowtime ? '✏️ Chỉnh sửa suất chiếu' : '➕ Thêm suất chiếu mới'}</h2>
@@ -1960,7 +1993,18 @@ const Admin = () => {
 
             {/* Genre Management Modal */}
             {showGenreModal && (
-                <div className="modal-overlay" onClick={closeGenreModal}>
+                <div className="modal-overlay"
+                    onMouseDown={(e) => {
+                        if (e.target === e.currentTarget) {
+                            e.currentTarget.dataset.mousedownOnOverlay = 'true';
+                        }
+                    }}
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget && e.currentTarget.dataset.mousedownOnOverlay === 'true') {
+                            closeGenreModal();
+                        }
+                        delete e.currentTarget.dataset.mousedownOnOverlay;
+                    }}>
                     <div className="modal-content genre-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
                             <h3>🏷️ Quản lý Thể loại Phim</h3>

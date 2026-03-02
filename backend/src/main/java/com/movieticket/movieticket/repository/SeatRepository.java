@@ -9,10 +9,12 @@ import java.util.Optional;
 
 @Repository
 public interface SeatRepository extends JpaRepository<Seat, Long> {
-    
+
     List<Seat> findByShowtimeId(Long showtimeId);
-    
+
+    long countByShowtimeId(Long showtimeId);
+
     Optional<Seat> findByShowtimeIdAndSeatNumber(Long showtimeId, String seatNumber);
-    
+
     List<Seat> findByShowtimeIdAndStatus(Long showtimeId, Seat.SeatStatus status);
 }

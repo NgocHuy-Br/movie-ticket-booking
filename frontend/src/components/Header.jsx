@@ -156,20 +156,24 @@ const Header = () => {
                     </svg>
                     Tài khoản của tôi
                   </button>
-                  <button className="dropdown-item" onClick={handleMyMovies}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <rect x="2" y="7" width="20" height="15" rx="2" ry="2" stroke="currentColor" strokeWidth="2" />
-                      <polyline points="17 2 12 7 7 2" stroke="currentColor" strokeWidth="2" />
-                    </svg>
-                    Phim của tôi
-                  </button>
-                  <button className="dropdown-item" onClick={handleMyWallet}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <rect x="1" y="4" width="22" height="16" rx="2" ry="2" stroke="currentColor" strokeWidth="2" />
-                      <line x1="1" y1="10" x2="23" y2="10" stroke="currentColor" strokeWidth="2" />
-                    </svg>
-                    Ví của tôi
-                  </button>
+                  {userInfo.role !== 'ADMIN' && (
+                    <>
+                      <button className="dropdown-item" onClick={handleMyMovies}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <rect x="2" y="7" width="20" height="15" rx="2" ry="2" stroke="currentColor" strokeWidth="2" />
+                          <polyline points="17 2 12 7 7 2" stroke="currentColor" strokeWidth="2" />
+                        </svg>
+                        Phim của tôi
+                      </button>
+                      <button className="dropdown-item" onClick={handleMyWallet}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <rect x="1" y="4" width="22" height="16" rx="2" ry="2" stroke="currentColor" strokeWidth="2" />
+                          <line x1="1" y1="10" x2="23" y2="10" stroke="currentColor" strokeWidth="2" />
+                        </svg>
+                        Ví của tôi
+                      </button>
+                    </>
+                  )}
                   <div className="dropdown-divider"></div>
                   <button className="dropdown-item logout" onClick={handleLogout}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">

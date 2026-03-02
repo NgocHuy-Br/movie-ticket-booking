@@ -2,11 +2,13 @@ package com.movieticket.movieticket.service.impl;
 
 import com.movieticket.movieticket.dto.SeatDto;
 import com.movieticket.movieticket.dto.ShowtimeDto;
+import com.movieticket.movieticket.entity.CinemaRoom;
 import com.movieticket.movieticket.entity.Movie;
 import com.movieticket.movieticket.entity.Seat;
 import com.movieticket.movieticket.entity.Showtime;
 import com.movieticket.movieticket.entity.Theater;
 import com.movieticket.movieticket.repository.BookingRepository;
+import com.movieticket.movieticket.repository.CinemaRoomRepository;
 import com.movieticket.movieticket.repository.MovieRepository;
 import com.movieticket.movieticket.repository.SeatRepository;
 import com.movieticket.movieticket.repository.ShowtimeRepository;
@@ -28,12 +30,9 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     private final ShowtimeRepository showtimeRepository;
     private final MovieRepository movieRepository;
     private final TheaterRepository theaterRepository;
+    private final CinemaRoomRepository roomRepository;
     private final SeatRepository seatRepository;
     private final BookingRepository bookingRepository;
-
-    // Cấu hình sơ đồ ghế: 8 hàng (A-H), 10 cột (1-10)
-    private static final String[] ROWS = { "A", "B", "C", "D", "E", "F", "G", "H" };
-    private static final int COLS = 10;
 
     @Override
     public List<ShowtimeDto> getAllShowtimes() {
@@ -76,17 +75,23 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         Movie movie = movieRepository.findById(showtimeDto.getMovieId())
                 .orElseThrow(() -> new RuntimeException("Movie not found with id: " + showtimeDto.getMovieId()));
 
-        Theater theater = theaterRepository.findById(showtimeDto.getTheaterId())
-                .orElseThrow(() -> new RuntimeException("Theater not found with id: " + showtimeDto.getTheaterId()));
+        CinemaRoom room = roomRepository.findById(showtimeDto.getRoomId())
+                .orElseThrow(() -> new RuntimeException("Cinema room not found with id: " + showtimeDto.getRoomId()));
+
+        Theater theater = room.getTheater();
+
+        // Get seat configuration from room
+        int totalSeats = room.getTotalSeats();
 
         Showtime showtime = new Showtime();
         showtime.setMovie(movie);
         showtime.setTheater(theater);
+        showtime.setRoom(room);
         showtime.setShowDate(showtimeDto.getShowDate());
         showtime.setShowTime(showtimeDto.getShowTime());
         showtime.setPrice(showtimeDto.getPrice());
-        showtime.setAvailableSeats(ROWS.length * COLS);
-        showtime.setTotalSeats(ROWS.length * COLS);
+        showtime.setAvailableSeats(totalSeats);
+        showtime.setTotalSeats(totalSeats);
 
         Showtime savedShowtime = showtimeRepository.save(showtime);
 
@@ -169,14 +174,28 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         Showtime showtime = showtimeRepository.findById(showtimeId)
                 .orElseThrow(() -> new RuntimeException("Showtime not found with id: " + showtimeId));
 
+        // Check if seats already exist
+        long existingSeatsCount = seatRepository.countByShowtimeId(showtimeId);
+        if (existingSeatsCount > 0) {
+            return; // Seats already initialized
+        }
+
+        // Get seat configuration from cinema room
+        CinemaRoom room = showtime.getRoom();
+        int totalRows = room.getTotalRows();
+        int seatsPerRow = room.getTotalCols();
+
         List<Seat> seats = new ArrayList<>();
 
-        for (String row : ROWS) {
-            for (int col = 1; col <= COLS; col++) {
+        // Generate row labels (A, B, C, ...)
+        for (int i = 0; i < totalRows; i++) {
+            String rowLabel = String.valueOf((char) ('A' + i));
+
+            for (int col = 1; col <= seatsPerRow; col++) {
                 Seat seat = new Seat();
                 seat.setShowtime(showtime);
-                seat.setSeatNumber(row + col);
-                seat.setRowLabel(row);
+                seat.setSeatNumber(rowLabel + col);
+                seat.setRowLabel(rowLabel);
                 seat.setColumnNumber(col);
                 seat.setStatus(Seat.SeatStatus.AVAILABLE);
                 seats.add(seat);
@@ -184,6 +203,11 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         }
 
         seatRepository.saveAll(seats);
+
+        // Update showtime total seats
+        showtime.setTotalSeats(seats.size());
+        showtime.setAvailableSeats(seats.size());
+        showtimeRepository.save(showtime);
     }
 
     private ShowtimeDto convertToDto(Showtime showtime) {
@@ -193,6 +217,8 @@ public class ShowtimeServiceImpl implements ShowtimeService {
                 .movieTitle(showtime.getMovie().getTitle())
                 .theaterId(showtime.getTheater().getId())
                 .theaterName(showtime.getTheater().getName())
+                .roomId(showtime.getRoom().getId())
+                .roomName(showtime.getRoom().getName())
                 .showDate(showtime.getShowDate())
                 .showTime(showtime.getShowTime())
                 .price(showtime.getPrice())

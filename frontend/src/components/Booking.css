@@ -100,18 +100,38 @@
 
 
 .time-slot {
-  padding: 8px 14px;
+  padding: 10px 14px;
   border: 2px solid #ddd;
   background-color: #f8f9fa;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 15px;
+  font-size: 14px;
   color: #000;
   transition: all 0.2s;
   white-space: nowrap;
   flex: 0 0 auto;
   width: auto;
-  min-width: fit-content;
+  min-width: 100px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.time-slot-time {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.time-slot-date {
+  font-size: 11px;
+  color: #666;
+}
+
+.time-slot.active .time-slot-time,
+.time-slot.active .time-slot-date {
+  color: white;
 }
 
 .time-slot:hover {
@@ -176,13 +196,14 @@
 }
 
 .seat-sample.selected {
-  background-color: #28a745;
-  border-color: #28a745;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border-color: #16a34a;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
 }
 
 .seat-sample.occupied {
-  background-color: #dc3545;
-  border-color: #dc3545;
+  background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
+  border-color: #dc2626;
   cursor: not-allowed;
 }
 
@@ -247,17 +268,27 @@
 }
 
 .seat.selected {
-  background-color: #28a745;
-  border-color: #28a745;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border-color: #16a34a;
   color: white;
+  box-shadow: 0 3px 10px rgba(34, 197, 94, 0.5);
+  font-weight: bold;
 }
 
 .seat.occupied {
-  background-color: #dc3545;
-  border-color: #dc3545;
+  background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
+  border-color: #dc2626;
   color: white;
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.8;
+  position: relative;
+}
+
+.seat.occupied::after {
+  content: '✕';
+  position: absolute;
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .seat:disabled {
@@ -310,8 +341,28 @@
   transition: background-color 0.2s;
 }
 
-.confirm-btn:hover {
-  background-color: #218838;
+.confirm-btn:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.confirm-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.loading,
+.no-data {
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 16px;
+  color: #666;
+  font-style: italic;
+}
+
+.loading {
+  color: #007bff;
+  font-weight: 500;
 }
 
 @media (max-width: 1440px) {
