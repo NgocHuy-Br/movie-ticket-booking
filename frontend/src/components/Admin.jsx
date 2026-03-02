@@ -34,6 +34,10 @@ const Admin = () => {
         totalRooms: 1
     });
     const [isEditMode, setIsEditMode] = useState(false);
+    const [theaterSearch, setTheaterSearch] = useState('');
+    const [theaterSortField, setTheaterSortField] = useState('');
+    const [theaterSortOrder, setTheaterSortOrder] = useState('asc');
+    const [theaterCityFilter, setTheaterCityFilter] = useState('');
 
     // Movie management states
     const [showMovieModal, setShowMovieModal] = useState(false);
@@ -49,6 +53,10 @@ const Admin = () => {
         status: 'NOW_SHOWING'
     });
     const [isEditModeMovie, setIsEditModeMovie] = useState(false);
+    const [movieSearch, setMovieSearch] = useState('');
+    const [movieSortField, setMovieSortField] = useState('');
+    const [movieSortOrder, setMovieSortOrder] = useState('asc');
+    const [movieGenreFilter, setMovieGenreFilter] = useState('');
 
     // Showtime management states
     const [showShowtimeModal, setShowShowtimeModal] = useState(false);
@@ -61,6 +69,10 @@ const Admin = () => {
         price: 50000
     });
     const [isEditModeShowtime, setIsEditModeShowtime] = useState(false);
+    const [showtimeSearch, setShowtimeSearch] = useState('');
+    const [showtimeSortField, setShowtimeSortField] = useState('');
+    const [showtimeSortOrder, setShowtimeSortOrder] = useState('asc');
+    const [showtimeTheaterFilter, setShowtimeTheaterFilter] = useState('');
 
     // Genre management states
     const [genres, setGenres] = useState([]);
@@ -91,6 +103,7 @@ const Admin = () => {
             fetchTheaters();
         } else if (activeTab === 'showtimes') {
             fetchShowtimes();
+            fetchTheaters(); // Need theaters for filter dropdown
         } else if (activeTab === 'users') {
             fetchUsers();
         } else if (activeTab === 'bookings') {
@@ -452,6 +465,76 @@ const Admin = () => {
         }
     };
 
+    // Sort theater handler
+    const handleTheaterSort = (field) => {
+        if (theaterSortField === field) {
+            setTheaterSortOrder(theaterSortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setTheaterSortField(field);
+            setTheaterSortOrder('asc');
+        }
+    };
+
+    // Filter and sort theaters
+    const getFilteredAndSortedTheaters = () => {
+        let filtered = [...theaters];
+
+        // Filter by city
+        if (theaterCityFilter) {
+            filtered = filtered.filter(theater =>
+                theater.city === theaterCityFilter
+            );
+        }
+
+        // Filter by search (theater name only)
+        if (theaterSearch.trim()) {
+            const searchLower = theaterSearch.toLowerCase();
+            filtered = filtered.filter(theater =>
+                theater.name && theater.name.toLowerCase().includes(searchLower)
+            );
+        }
+
+        // Sort
+        if (theaterSortField) {
+            filtered.sort((a, b) => {
+                let aVal, bVal;
+
+                switch (theaterSortField) {
+                    case 'name':
+                        aVal = (a.name || '').toLowerCase();
+                        bVal = (b.name || '').toLowerCase();
+                        break;
+                    case 'city':
+                        aVal = (a.city || '').toLowerCase();
+                        bVal = (b.city || '').toLowerCase();
+                        break;
+                    case 'address':
+                        aVal = (a.address || '').toLowerCase();
+                        bVal = (b.address || '').toLowerCase();
+                        break;
+                    case 'rooms':
+                        aVal = a.totalRooms || 0;
+                        bVal = b.totalRooms || 0;
+                        break;
+                    default:
+                        return 0;
+                }
+
+                if (aVal < bVal) return theaterSortOrder === 'asc' ? -1 : 1;
+                if (aVal > bVal) return theaterSortOrder === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        return filtered;
+    };
+
+    // Get unique cities from theaters
+    const getUniqueCities = () => {
+        const cities = [...new Set(theaters.map(t => t.city).filter(c => c))];
+        return cities.sort();
+    };
+
     // ===== Movie Management Functions =====
     const openAddMovieModal = () => {
         setMovieForm({
@@ -612,6 +695,84 @@ const Admin = () => {
             console.error('Failed to delete movie:', error);
             alert('❌ Không thể xóa phim!');
         }
+    };
+
+    // Movie filter and sort functions
+    const handleMovieSort = (field) => {
+        if (movieSortField === field) {
+            setMovieSortOrder(movieSortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setMovieSortField(field);
+            setMovieSortOrder('asc');
+        }
+    };
+
+    const getFilteredAndSortedMovies = () => {
+        let filtered = [...movies];
+
+        // Filter by genre
+        if (movieGenreFilter) {
+            filtered = filtered.filter(movie => movie.genre === movieGenreFilter);
+        }
+
+        // Filter by movie name (search)
+        if (movieSearch.trim()) {
+            const searchLower = movieSearch.toLowerCase().trim();
+            filtered = filtered.filter(movie =>
+                movie.title && movie.title.toLowerCase().includes(searchLower)
+            );
+        }
+
+        // Sort
+        if (movieSortField) {
+            filtered.sort((a, b) => {
+                let aVal, bVal;
+
+                switch (movieSortField) {
+                    case 'title':
+                        aVal = (a.title || '').toLowerCase();
+                        bVal = (b.title || '').toLowerCase();
+                        break;
+                    case 'genre':
+                        aVal = (a.genre || '').toLowerCase();
+                        bVal = (b.genre || '').toLowerCase();
+                        break;
+                    case 'ageRating':
+                        aVal = a.ageRating || '';
+                        bVal = b.ageRating || '';
+                        break;
+                    case 'duration':
+                        aVal = a.duration || 0;
+                        bVal = b.duration || 0;
+                        break;
+                    case 'releaseDate':
+                        aVal = a.releaseDate ? new Date(a.releaseDate).getTime() : 0;
+                        bVal = b.releaseDate ? new Date(b.releaseDate).getTime() : 0;
+                        break;
+                    case 'status':
+                        aVal = a.status || '';
+                        bVal = b.status || '';
+                        break;
+                    default:
+                        return 0;
+                }
+
+                if (movieSortField === 'duration' || movieSortField === 'releaseDate') {
+                    return movieSortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+                }
+
+                if (aVal < bVal) return movieSortOrder === 'asc' ? -1 : 1;
+                if (aVal > bVal) return movieSortOrder === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        return filtered;
+    };
+
+    const getUniqueGenres = () => {
+        const genreSet = new Set(movies.map(m => m.genre).filter(g => g));
+        return [...genreSet].sort();
     };
 
     // ===== Genre Management Functions =====
@@ -863,6 +1024,76 @@ const Admin = () => {
         }
     };
 
+    // Sort showtime handler
+    const handleShowtimeSort = (field) => {
+        if (showtimeSortField === field) {
+            // Toggle sort order if clicking same field
+            setShowtimeSortOrder(showtimeSortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            // New field, default to ascending
+            setShowtimeSortField(field);
+            setShowtimeSortOrder('asc');
+        }
+    };
+
+    // Filter and sort showtimes
+    const getFilteredAndSortedShowtimes = () => {
+        let filtered = [...showtimes];
+
+        // Filter by theater
+        if (showtimeTheaterFilter) {
+            filtered = filtered.filter(showtime =>
+                showtime.theaterId === parseInt(showtimeTheaterFilter)
+            );
+        }
+
+        // Filter by search (movie title only)
+        if (showtimeSearch.trim()) {
+            const searchLower = showtimeSearch.toLowerCase();
+            filtered = filtered.filter(showtime =>
+                showtime.movieTitle && showtime.movieTitle.toLowerCase().includes(searchLower)
+            );
+        }
+
+        // Sort
+        if (showtimeSortField) {
+            filtered.sort((a, b) => {
+                let aVal, bVal;
+
+                switch (showtimeSortField) {
+                    case 'movie':
+                        aVal = (a.movieTitle || '').toLowerCase();
+                        bVal = (b.movieTitle || '').toLowerCase();
+                        break;
+                    case 'theater':
+                        aVal = (a.theaterName || '').toLowerCase();
+                        bVal = (b.theaterName || '').toLowerCase();
+                        break;
+                    case 'date':
+                        aVal = a.showDate || '';
+                        bVal = b.showDate || '';
+                        break;
+                    case 'time':
+                        aVal = a.showTime || '';
+                        bVal = b.showTime || '';
+                        break;
+                    case 'price':
+                        aVal = a.price || 0;
+                        bVal = b.price || 0;
+                        break;
+                    default:
+                        return 0;
+                }
+
+                if (aVal < bVal) return showtimeSortOrder === 'asc' ? -1 : 1;
+                if (aVal > bVal) return showtimeSortOrder === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        return filtered;
+    };
+
     if (loading) {
         return (
             <>
@@ -943,19 +1174,79 @@ const Admin = () => {
                             <div className="section-header">
                                 <h2>🎬 Quản lý Phim</h2>
                                 <div style={{ display: 'flex', gap: '10px' }}>
-                                    <button className="add-btn" onClick={openGenreManagementModal} style={{ backgroundColor: '#6c757d' }}>
-                                        🏷️ Chỉnh sửa thể loại
+                                    <button className="add-btn" onClick={openGenreManagementModal} style={{ backgroundColor: '#6c757d', width: 'auto', padding: '10px 35px' }}>
+                                        🏷️ Thể loại
                                     </button>
-                                    <button className="add-btn" onClick={openAddMovieModal}>
-                                        + Thêm phim mới
+                                    <button className="add-btn" onClick={openAddMovieModal} style={{ width: 'auto', padding: '10px 35px' }}>
+                                        + Thêm
                                     </button>
                                 </div>
                             </div>
                             <p className="section-description">Thêm, sửa, xóa thông tin phim</p>
 
+                            <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', alignItems: 'center' }}>
+                                <div style={{ position: 'relative', flex: '1', maxWidth: '400px' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="🔍 Tìm theo tên phim..."
+                                        value={movieSearch}
+                                        onChange={(e) => setMovieSearch(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '10px 35px 10px 12px',
+                                            borderRadius: '8px',
+                                            border: '1px solid #ddd',
+                                            fontSize: '14px'
+                                        }}
+                                    />
+                                    {movieSearch && (
+                                        <button
+                                            onClick={() => setMovieSearch('')}
+                                            style={{
+                                                position: 'absolute',
+                                                right: '5px',
+                                                top: '50%',
+                                                transform: 'translateY(-50%)',
+                                                background: 'none',
+                                                border: 'none',
+                                                fontSize: '22px',
+                                                cursor: 'pointer',
+                                                color: '#999',
+                                                padding: '0 8px',
+                                                lineHeight: '1'
+                                            }}
+                                        >
+                                            ×
+                                        </button>
+                                    )}
+                                </div>
+
+                                <select
+                                    value={movieGenreFilter}
+                                    onChange={(e) => setMovieGenreFilter(e.target.value)}
+                                    style={{
+                                        padding: '10px 12px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #ddd',
+                                        fontSize: '14px',
+                                        cursor: 'pointer',
+                                        minWidth: '200px'
+                                    }}
+                                >
+                                    <option value="">🎭 Tất cả thể loại</option>
+                                    {getUniqueGenres().map(genre => (
+                                        <option key={genre} value={genre}>{genre}</option>
+                                    ))}
+                                </select>
+                            </div>
+
                             {movies.length === 0 ? (
                                 <div className="empty-state">
                                     <p>Chưa có phim nào. Hãy thêm phim mới!</p>
+                                </div>
+                            ) : getFilteredAndSortedMovies().length === 0 ? (
+                                <div className="empty-state">
+                                    <p>Không tìm thấy phim nào phù hợp với bộ lọc.</p>
                                 </div>
                             ) : (
                                 <div className="data-table">
@@ -963,18 +1254,48 @@ const Admin = () => {
                                         <thead>
                                             <tr>
                                                 <th>ID</th>
-                                                <th>Tên phim</th>
-                                                <th>Thể loại</th>
+                                                <th
+                                                    onClick={() => handleMovieSort('title')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Tên phim {movieSortField === 'title' ? (movieSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleMovieSort('genre')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Thể loại {movieSortField === 'genre' ? (movieSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
                                                 <th>Mô tả</th>
-                                                <th>Độ tuổi</th>
-                                                <th>Thời lượng</th>
-                                                <th>Ngày khởi chiếu</th>
-                                                <th>Trạng thái</th>
+                                                <th
+                                                    onClick={() => handleMovieSort('ageRating')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Độ tuổi {movieSortField === 'ageRating' ? (movieSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleMovieSort('duration')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Thời lượng {movieSortField === 'duration' ? (movieSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleMovieSort('releaseDate')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Ngày khởi chiếu {movieSortField === 'releaseDate' ? (movieSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleMovieSort('status')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Trạng thái {movieSortField === 'status' ? (movieSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
                                                 <th>Thao tác</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {movies.map(movie => (
+                                            {getFilteredAndSortedMovies().map(movie => (
                                                 <tr key={movie.id}>
                                                     <td>{movie.id}</td>
                                                     <td>
@@ -1051,15 +1372,75 @@ const Admin = () => {
                         <div className="content-section">
                             <div className="section-header">
                                 <h2>🏢 Quản lý Rạp</h2>
-                                <button className="add-btn" onClick={openAddTheaterModal}>
-                                    + Thêm rạp mới
+                                <button className="add-btn" onClick={openAddTheaterModal} style={{ width: 'auto', padding: '10px 35px' }}>
+                                    + Thêm
                                 </button>
                             </div>
                             <p className="section-description">Quản lý thông tin rạp chiếu phim</p>
 
+                            <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', alignItems: 'center' }}>
+                                <div style={{ position: 'relative', flex: '1', maxWidth: '400px' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="🔍 Tìm theo tên rạp..."
+                                        value={theaterSearch}
+                                        onChange={(e) => setTheaterSearch(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '10px 35px 10px 12px',
+                                            borderRadius: '8px',
+                                            border: '1px solid #ddd',
+                                            fontSize: '14px'
+                                        }}
+                                    />
+                                    {theaterSearch && (
+                                        <button
+                                            onClick={() => setTheaterSearch('')}
+                                            style={{
+                                                position: 'absolute',
+                                                right: '5px',
+                                                top: '50%',
+                                                transform: 'translateY(-50%)',
+                                                background: 'none',
+                                                border: 'none',
+                                                fontSize: '22px',
+                                                cursor: 'pointer',
+                                                color: '#999',
+                                                padding: '0 8px',
+                                                lineHeight: '1'
+                                            }}
+                                        >
+                                            ×
+                                        </button>
+                                    )}
+                                </div>
+
+                                <select
+                                    value={theaterCityFilter}
+                                    onChange={(e) => setTheaterCityFilter(e.target.value)}
+                                    style={{
+                                        padding: '10px 12px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #ddd',
+                                        fontSize: '14px',
+                                        cursor: 'pointer',
+                                        minWidth: '200px'
+                                    }}
+                                >
+                                    <option value="">🏙️ Tất cả thành phố</option>
+                                    {getUniqueCities().map(city => (
+                                        <option key={city} value={city}>{city}</option>
+                                    ))}
+                                </select>
+                            </div>
+
                             {theaters.length === 0 ? (
                                 <div className="empty-state">
                                     <p>Chưa có rạp nào. Hãy thêm rạp mới!</p>
+                                </div>
+                            ) : getFilteredAndSortedTheaters().length === 0 ? (
+                                <div className="empty-state">
+                                    <p>Không tìm thấy rạp nào phù hợp với bộ lọc.</p>
                                 </div>
                             ) : (
                                 <div className="data-table">
@@ -1067,16 +1448,36 @@ const Admin = () => {
                                         <thead>
                                             <tr>
                                                 <th>ID</th>
-                                                <th>Tên rạp</th>
-                                                <th>Thành phố</th>
-                                                <th>Địa chỉ</th>
+                                                <th
+                                                    onClick={() => handleTheaterSort('name')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Tên rạp {theaterSortField === 'name' ? (theaterSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleTheaterSort('city')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Thành phố {theaterSortField === 'city' ? (theaterSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleTheaterSort('address')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Địa chỉ {theaterSortField === 'address' ? (theaterSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
                                                 <th>Số điện thoại</th>
-                                                <th>Số phòng</th>
+                                                <th
+                                                    onClick={() => handleTheaterSort('totalRooms')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Số phòng {theaterSortField === 'totalRooms' ? (theaterSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
                                                 <th>Thao tác</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {theaters.map(theater => (
+                                            {getFilteredAndSortedTheaters().map(theater => (
                                                 <tr key={theater.id}>
                                                     <td>{theater.id}</td>
                                                     <td><strong>{theater.name}</strong></td>
@@ -1111,15 +1512,105 @@ const Admin = () => {
                         <div className="content-section">
                             <div className="section-header">
                                 <h2>🎞️ Quản lý Suất Chiếu</h2>
-                                <button className="add-btn" onClick={openAddShowtimeModal}>
-                                    + Thêm suất chiếu mới
+                                <button className="add-btn" onClick={openAddShowtimeModal} style={{ width: 'auto', padding: '10px 35px' }}>
+                                    + Thêm
                                 </button>
                             </div>
                             <p className="section-description">Tạo và quản lý lịch chiếu phim</p>
 
+                            {/* Filters */}
+                            <div style={{
+                                display: 'flex',
+                                gap: '15px',
+                                marginBottom: '20px',
+                                alignItems: 'center'
+                            }}>
+                                {/* Search Box */}
+                                <div style={{
+                                    position: 'relative',
+                                    flex: '1',
+                                    maxWidth: '400px'
+                                }}>
+                                    <input
+                                        type="text"
+                                        placeholder="🔍 Tìm theo tên phim..."
+                                        value={showtimeSearch}
+                                        onChange={(e) => setShowtimeSearch(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px 40px 12px 20px',
+                                            fontSize: '15px',
+                                            border: '2px solid #e0e0e0',
+                                            borderRadius: '8px',
+                                            outline: 'none',
+                                            transition: 'border-color 0.3s'
+                                        }}
+                                        onFocus={(e) => e.target.style.borderColor = '#5e72e4'}
+                                        onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                                    />
+                                    {showtimeSearch && (
+                                        <button
+                                            onClick={() => setShowtimeSearch('')}
+                                            style={{
+                                                position: 'absolute',
+                                                right: '5px',
+                                                top: '50%',
+                                                transform: 'translateY(-50%)',
+                                                background: 'none',
+                                                border: 'none',
+                                                fontSize: '22px',
+                                                color: '#999',
+                                                cursor: 'pointer',
+                                                padding: '5px 8px',
+                                                lineHeight: '1',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}
+                                            onMouseEnter={(e) => e.target.style.color = '#333'}
+                                            onMouseLeave={(e) => e.target.style.color = '#999'}
+                                        >
+                                            ×
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Theater Filter Dropdown */}
+                                <div style={{ flex: '0 0 250px' }}>
+                                    <select
+                                        value={showtimeTheaterFilter}
+                                        onChange={(e) => setShowtimeTheaterFilter(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px 20px',
+                                            fontSize: '15px',
+                                            border: '2px solid #e0e0e0',
+                                            borderRadius: '8px',
+                                            outline: 'none',
+                                            cursor: 'pointer',
+                                            backgroundColor: 'white',
+                                            transition: 'border-color 0.3s'
+                                        }}
+                                        onFocus={(e) => e.target.style.borderColor = '#5e72e4'}
+                                        onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                                    >
+                                        <option value="">🎭 Tất cả rạp</option>
+                                        {theaters.map(theater => (
+                                            <option key={theater.id} value={theater.id}>
+                                                {theater.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
                             {showtimes.length === 0 ? (
                                 <div className="empty-state">
                                     <p>Chưa có suất chiếu nào. Hãy thêm suất chiếu mới!</p>
+                                </div>
+                            ) : getFilteredAndSortedShowtimes().length === 0 ? (
+                                <div className="empty-state">
+                                    <p>🔍 Không tìm thấy suất chiếu phù hợp với bộ lọc hiện tại</p>
                                 </div>
                             ) : (
                                 <div className="data-table">
@@ -1127,17 +1618,42 @@ const Admin = () => {
                                         <thead>
                                             <tr>
                                                 <th>ID</th>
-                                                <th>Phim</th>
-                                                <th>Rạp</th>
-                                                <th>Ngày chiếu</th>
-                                                <th>Giờ chiếu</th>
-                                                <th>Giá vé</th>
+                                                <th
+                                                    onClick={() => handleShowtimeSort('movie')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Phim {showtimeSortField === 'movie' ? (showtimeSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleShowtimeSort('theater')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Rạp {showtimeSortField === 'theater' ? (showtimeSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleShowtimeSort('date')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Ngày chiếu {showtimeSortField === 'date' ? (showtimeSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleShowtimeSort('time')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Giờ chiếu {showtimeSortField === 'time' ? (showtimeSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleShowtimeSort('price')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Giá vé {showtimeSortField === 'price' ? (showtimeSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
                                                 <th>Ghế trống</th>
                                                 <th>Thao tác</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {showtimes.map(showtime => (
+                                            {getFilteredAndSortedShowtimes().map(showtime => (
                                                 <tr key={showtime.id}>
                                                     <td>{showtime.id}</td>
                                                     <td><strong>{showtime.movieTitle || 'N/A'}</strong></td>

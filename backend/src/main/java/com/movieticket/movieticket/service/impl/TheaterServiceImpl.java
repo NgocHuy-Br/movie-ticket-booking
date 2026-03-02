@@ -4,6 +4,7 @@ import com.movieticket.movieticket.dto.TheaterDto;
 import com.movieticket.movieticket.entity.Theater;
 import com.movieticket.movieticket.repository.TheaterRepository;
 import com.movieticket.movieticket.repository.ShowtimeRepository;
+import com.movieticket.movieticket.repository.CinemaRoomRepository;
 import com.movieticket.movieticket.service.TheaterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ public class TheaterServiceImpl implements TheaterService {
 
     private final TheaterRepository theaterRepository;
     private final ShowtimeRepository showtimeRepository;
+    private final CinemaRoomRepository cinemaRoomRepository;
 
     @Override
     public List<TheaterDto> getAllTheaters() {
@@ -76,11 +78,17 @@ public class TheaterServiceImpl implements TheaterService {
     @Transactional
     public void deleteTheater(Long id) {
         if (!theaterRepository.existsById(id)) {
-            throw new RuntimeException("Theater not found with id: " + id);
+            throw new RuntimeException("Không tìm thấy rạp với id: " + id);
+        }
+        // Check if theater has any cinema rooms
+        if (!cinemaRoomRepository.findByTheaterId(id).isEmpty()) {
+            throw new RuntimeException(
+                    "Không thể xóa vì rạp đã có phòng chiếu. Vui lòng xóa tất cả phòng chiếu liên quan trước");
         }
         // Check if theater has any showtimes
         if (!showtimeRepository.findByTheaterId(id).isEmpty()) {
-            throw new RuntimeException("Cannot delete theater that has showtimes. Please delete all showtimes first.");
+            throw new RuntimeException(
+                    "Không thể xóa vì rạp đã có suất chiếu. Vui lòng xóa tất cả suất chiếu liên quan trước");
         }
         theaterRepository.deleteById(id);
     }
