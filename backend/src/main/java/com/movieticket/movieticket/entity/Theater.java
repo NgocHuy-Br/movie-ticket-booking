@@ -35,6 +35,12 @@ public class Theater {
     @Column(name = "total_rooms")
     private Integer totalRooms = 1;
 
+    @Column(name = "default_rows")
+    private Integer defaultRows = 10;
+
+    @Column(name = "default_cols")
+    private Integer defaultCols = 8;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

@@ -3,6 +3,8 @@ package com.movieticket.movieticket.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.movieticket.movieticket.dto.*;
 import com.movieticket.movieticket.entity.Booking;
+import com.movieticket.movieticket.entity.CinemaRoom;
+import com.movieticket.movieticket.entity.Theater;
 import com.movieticket.movieticket.repository.*;
 import com.movieticket.movieticket.service.*;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,8 @@ public class AdminController {
     private final BookingRepository bookingRepository;
     private final MovieRepository movieRepository;
     private final TheaterRepository theaterRepository;
+    private final ShowtimeRepository showtimeRepository;
+    private final CinemaRoomRepository cinemaRoomRepository;
     private final ObjectMapper objectMapper;
 
     // ==================== MOVIES MANAGEMENT ====================
@@ -496,6 +500,65 @@ public class AdminController {
         } catch (Exception e) {
             return ResponseEntity.status(500)
                     .body(ApiResponse.error("Server error: " + e.getMessage()));
+        }
+    }
+
+    // ==================== CINEMA ROOMS MIGRATION ====================
+
+    /**
+     * Migrate old cinema rooms to standardized format
+     * DELETE all showtimes and cinema rooms, then recreate rooms with format "Phòng
+     * 01, 02,..."
+     * Each room: 10 rows × 8 cols = 80 seats
+     * WARNING: This will delete all existing showtimes and cinema rooms!
+     */
+    @PostMapping("/migrate-cinema-rooms")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> migrateCinemaRooms() {
+        try {
+            // Step 1: Count current data
+            long oldShowtimesCount = showtimeRepository.count();
+            long oldRoomsCount = cinemaRoomRepository.count();
+
+            // Step 2: Delete all showtimes
+            showtimeRepository.deleteAll();
+
+            // Step 3: Delete all cinema rooms
+            cinemaRoomRepository.deleteAll();
+
+            // Step 4: Recreate cinema rooms with standard format
+            List<Theater> theaters = theaterRepository.findAll();
+            int totalRoomsCreated = 0;
+
+            for (Theater theater : theaters) {
+                int totalRooms = theater.getTotalRooms() != null ? theater.getTotalRooms() : 1;
+
+                for (int i = 1; i <= totalRooms; i++) {
+                    CinemaRoom room = new CinemaRoom();
+                    room.setTheater(theater);
+                    room.setName(String.format("Phòng %02d", i));
+                    room.setTotalRows(10);
+                    room.setTotalCols(8);
+                    cinemaRoomRepository.save(room);
+                    totalRoomsCreated++;
+                }
+            }
+
+            // Step 5: Return migration summary
+            Map<String, Object> result = new HashMap<>();
+            result.put("deletedShowtimes", oldShowtimesCount);
+            result.put("deletedRooms", oldRoomsCount);
+            result.put("createdRooms", totalRoomsCreated);
+            result.put("theaters", theaters.size());
+            result.put("message", String.format(
+                    "✅ Migration thành công! Đã xóa %d suất chiếu và %d phòng cũ. Tạo mới %d phòng chuẩn cho %d rạp.",
+                    oldShowtimesCount, oldRoomsCount, totalRoomsCreated, theaters.size()));
+
+            return ResponseEntity.ok(ApiResponse.success("Migration completed", result));
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(500)
+                    .body(ApiResponse.error("Migration failed: " + e.getMessage()));
         }
     }
 }

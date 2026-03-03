@@ -2,6 +2,7 @@ package com.movieticket.movieticket.service.impl;
 
 import com.movieticket.movieticket.dto.TheaterDto;
 import com.movieticket.movieticket.entity.Theater;
+import com.movieticket.movieticket.entity.CinemaRoom;
 import com.movieticket.movieticket.repository.TheaterRepository;
 import com.movieticket.movieticket.repository.ShowtimeRepository;
 import com.movieticket.movieticket.repository.CinemaRoomRepository;
@@ -50,6 +51,10 @@ public class TheaterServiceImpl implements TheaterService {
         theater.setTotalRooms(theaterDto.getTotalRooms());
 
         Theater savedTheater = theaterRepository.save(theater);
+
+        // Automatically create cinema rooms based on totalRooms
+        createCinemaRooms(savedTheater, theaterDto.getTotalRooms());
+
         return convertToDto(savedTheater);
     }
 
@@ -68,9 +73,19 @@ public class TheaterServiceImpl implements TheaterService {
         theater.setCity(theaterDto.getCity());
         theater.setAddress(theaterDto.getAddress());
         theater.setPhone(theaterDto.getPhone());
-        theater.setTotalRooms(theaterDto.getTotalRooms());
+
+        // Get current number of rooms before update
+        int oldTotalRooms = theater.getTotalRooms();
+        int newTotalRooms = theaterDto.getTotalRooms();
+        theater.setTotalRooms(newTotalRooms);
 
         Theater updatedTheater = theaterRepository.save(theater);
+
+        // Adjust cinema rooms if totalRooms changed
+        if (oldTotalRooms != newTotalRooms) {
+            adjustCinemaRooms(updatedTheater, oldTotalRooms, newTotalRooms);
+        }
+
         return convertToDto(updatedTheater);
     }
 
@@ -91,6 +106,68 @@ public class TheaterServiceImpl implements TheaterService {
                     "Không thể xóa vì rạp đã có suất chiếu. Vui lòng xóa tất cả suất chiếu liên quan trước");
         }
         theaterRepository.deleteById(id);
+    }
+
+    /**
+     * Create cinema rooms automatically when creating a new theater
+     * Uses theater's default rows and cols settings
+     */
+    private void createCinemaRooms(Theater theater, int totalRooms) {
+        int defaultRows = theater.getDefaultRows() != null ? theater.getDefaultRows() : 10;
+        int defaultCols = theater.getDefaultCols() != null ? theater.getDefaultCols() : 8;
+
+        for (int i = 1; i <= totalRooms; i++) {
+            CinemaRoom room = new CinemaRoom();
+            room.setTheater(theater);
+            room.setName(String.format("Phòng %02d", i));
+            room.setTotalRows(defaultRows);
+            room.setTotalCols(defaultCols);
+            cinemaRoomRepository.save(room);
+        }
+    }
+
+    /**
+     * Adjust cinema rooms when updating theater's totalRooms
+     */
+    private void adjustCinemaRooms(Theater theater, int oldTotal, int newTotal) {
+        if (newTotal > oldTotal) {
+            // Add more rooms using theater's default settings
+            int defaultRows = theater.getDefaultRows() != null ? theater.getDefaultRows() : 10;
+            int defaultCols = theater.getDefaultCols() != null ? theater.getDefaultCols() : 8;
+
+            for (int i = oldTotal + 1; i <= newTotal; i++) {
+                CinemaRoom room = new CinemaRoom();
+                room.setTheater(theater);
+                room.setName(String.format("Phòng %02d", i));
+                room.setTotalRows(defaultRows);
+                room.setTotalCols(defaultCols);
+                cinemaRoomRepository.save(room);
+            }
+        } else if (newTotal < oldTotal) {
+            // Remove extra rooms (only if they have no showtimes)
+            List<CinemaRoom> rooms = cinemaRoomRepository.findByTheaterId(theater.getId());
+
+            // Sort by room name to delete from highest number
+            rooms.sort((a, b) -> b.getName().compareTo(a.getName()));
+
+            int roomsToDelete = oldTotal - newTotal;
+            int deleted = 0;
+
+            for (CinemaRoom room : rooms) {
+                if (deleted >= roomsToDelete)
+                    break;
+
+                // Check if room has any showtimes
+                if (showtimeRepository.findByRoomId(room.getId()).isEmpty()) {
+                    cinemaRoomRepository.delete(room);
+                    deleted++;
+                } else {
+                    throw new RuntimeException(
+                            "Không thể giảm số phòng vì " + room.getName() +
+                                    " đã có suất chiếu. Vui lòng xóa suất chiếu trước!");
+                }
+            }
+        }
     }
 
     private TheaterDto convertToDto(Theater theater) {

@@ -31,7 +31,9 @@ const Admin = () => {
         city: '',
         address: '',
         phone: '',
-        totalRooms: 1
+        totalRooms: 1,
+        defaultRows: 10,
+        defaultCols: 8
     });
     const [isEditMode, setIsEditMode] = useState(false);
     const [theaterSearch, setTheaterSearch] = useState('');
@@ -64,6 +66,7 @@ const Admin = () => {
         id: null,
         movieId: '',
         theaterId: '',
+        roomId: '',
         showDate: '',
         showTime: '',
         price: 50000
@@ -73,6 +76,20 @@ const Admin = () => {
     const [showtimeSortField, setShowtimeSortField] = useState('');
     const [showtimeSortOrder, setShowtimeSortOrder] = useState('asc');
     const [showtimeTheaterFilter, setShowtimeTheaterFilter] = useState('');
+    const [cinemaRooms, setCinemaRooms] = useState([]);
+
+    // Room management states
+    const [rooms, setRooms] = useState([]);
+    const [showRoomModal, setShowRoomModal] = useState(false);
+    const [roomForm, setRoomForm] = useState({
+        id: null,
+        theaterId: '',
+        name: '',
+        totalRows: 10,
+        totalCols: 8
+    });
+    const [isEditModeRoom, setIsEditModeRoom] = useState(false);
+    const [roomTheaterFilter, setRoomTheaterFilter] = useState('');
 
     // Genre management states
     const [genres, setGenres] = useState([]);
@@ -101,6 +118,9 @@ const Admin = () => {
             fetchGenres();
         } else if (activeTab === 'theaters') {
             fetchTheaters();
+        } else if (activeTab === 'rooms') {
+            fetchRooms();
+            fetchTheaters(); // Need theaters for filter dropdown
         } else if (activeTab === 'showtimes') {
             fetchShowtimes();
             fetchTheaters(); // Need theaters for filter dropdown
@@ -159,6 +179,40 @@ const Admin = () => {
             }
         } catch (error) {
             console.error('Failed to fetch showtimes:', error);
+        }
+    };
+
+    const fetchCinemaRooms = async (theaterId) => {
+        if (!theaterId) {
+            setCinemaRooms([]);
+            return;
+        }
+        try {
+            const response = await fetch(`http://localhost:8080/api/rooms?theaterId=${theaterId}`, {
+                headers: getAuthHeaders()
+            });
+            const data = await response.json();
+            if (data.success) {
+                setCinemaRooms(data.data || []);
+            }
+        } catch (error) {
+            console.error('Failed to fetch cinema rooms:', error);
+            setCinemaRooms([]);
+        }
+    };
+
+    const fetchRooms = async () => {
+        try {
+            const response = await fetch('http://localhost:8080/api/rooms', {
+                headers: getAuthHeaders()
+            });
+            const data = await response.json();
+            if (data.success) {
+                setRooms(data.data || []);
+            }
+        } catch (error) {
+            console.error('Failed to fetch rooms:', error);
+            alert('Không thể tải danh sách phòng chiếu!');
         }
     };
 
@@ -345,7 +399,9 @@ const Admin = () => {
             city: '',
             address: '',
             phone: '',
-            totalRooms: 1
+            totalRooms: 1,
+            defaultRows: 10,
+            defaultCols: 8
         });
         setIsEditMode(false);
         setShowTheaterModal(true);
@@ -358,7 +414,9 @@ const Admin = () => {
             city: theater.city || '',
             address: theater.address || '',
             phone: theater.phone || '',
-            totalRooms: theater.totalRooms || 1
+            totalRooms: theater.totalRooms || 1,
+            defaultRows: theater.defaultRows || 10,
+            defaultCols: theater.defaultCols || 8
         });
         setIsEditMode(true);
         setShowTheaterModal(true);
@@ -372,7 +430,9 @@ const Admin = () => {
             city: '',
             address: '',
             phone: '',
-            totalRooms: 1
+            totalRooms: 1,
+            defaultRows: 10,
+            defaultCols: 8
         });
         setIsEditMode(false);
     };
@@ -421,7 +481,9 @@ const Admin = () => {
                     city: theaterForm.city,
                     address: theaterForm.address,
                     phone: theaterForm.phone,
-                    totalRooms: parseInt(theaterForm.totalRooms)
+                    totalRooms: parseInt(theaterForm.totalRooms),
+                    defaultRows: parseInt(theaterForm.defaultRows),
+                    defaultCols: parseInt(theaterForm.defaultCols)
                 })
             });
 
@@ -462,6 +524,174 @@ const Admin = () => {
         } catch (error) {
             console.error('Failed to delete theater:', error);
             alert('❌ Không thể xóa rạp!');
+        }
+    };
+
+    const migrateCinemaRooms = async () => {
+        const confirmMessage =
+            '⚠️ CẢNH BÁO: Hành động này sẽ:\n\n' +
+            '❌ XÓA TẤT CẢ SUẤT CHIẾU hiện tại\n' +
+            '❌ XÓA TẤT CẢ PHÒNG CHIẾU hiện tại\n' +
+            '✅ TẠO LẠI phòng theo format: "Phòng 01, 02,..."\n' +
+            '✅ Mỗi phòng: 10 hàng × 8 cột = 80 ghế\n\n' +
+            'Bạn có chắc chắn muốn tiếp tục?';
+
+        if (!window.confirm(confirmMessage)) {
+            return;
+        }
+
+        try {
+            const response = await fetch('http://localhost:8080/api/admin/migrate-cinema-rooms', {
+                method: 'POST',
+                headers: getAuthHeaders()
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                const result = data.data;
+                alert(
+                    '✅ MIGRATION THÀNH CÔNG!\n\n' +
+                    `📊 Thống kê:\n` +
+                    `• Đã xóa ${result.deletedShowtimes} suất chiếu\n` +
+                    `• Đã xóa ${result.deletedRooms} phòng cũ\n` +
+                    `• Đã tạo ${result.createdRooms} phòng mới cho ${result.theaters} rạp\n\n` +
+                    `🎉 Tất cả phòng giờ có format chuẩn với 80 ghế!`
+                );
+                // Reload data
+                await fetchTheaters();
+                await fetchShowtimes();
+            } else {
+                alert('❌ Lỗi: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Failed to migrate cinema rooms:', error);
+            alert('❌ Không thể thực hiện migration!');
+        }
+    };
+
+    // Room management functions
+    const openAddRoomModal = () => {
+        setRoomForm({
+            id: null,
+            theaterId: '',
+            name: '',
+            totalRows: 10,
+            totalCols: 8
+        });
+        setIsEditModeRoom(false);
+        setShowRoomModal(true);
+    };
+
+    const openEditRoomModal = (room) => {
+        setRoomForm({
+            id: room.id,
+            theaterId: room.theaterId,
+            name: room.name,
+            totalRows: room.totalRows,
+            totalCols: room.totalCols
+        });
+        setIsEditModeRoom(true);
+        setShowRoomModal(true);
+    };
+
+    const closeRoomModal = () => {
+        setShowRoomModal(false);
+        setRoomForm({
+            id: null,
+            theaterId: '',
+            name: '',
+            totalRows: 10,
+            totalCols: 8
+        });
+        setIsEditModeRoom(false);
+    };
+
+    const handleRoomFormChange = (e) => {
+        const { name, value } = e.target;
+        setRoomForm(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    const saveRoom = async () => {
+        // Validation
+        if (!roomForm.theaterId) {
+            alert('Vui lòng chọn rạp chiếu!');
+            return;
+        }
+        if (!roomForm.name.trim()) {
+            alert('Vui lòng nhập tên phòng!');
+            return;
+        }
+        if (!roomForm.totalRows || roomForm.totalRows < 1 || roomForm.totalRows > 20) {
+            alert('Số hàng ghế phải từ 1-20!');
+            return;
+        }
+        if (!roomForm.totalCols || roomForm.totalCols < 1 || roomForm.totalCols > 20) {
+            alert('Số ghế mỗi hàng phải từ 1-20!');
+            return;
+        }
+
+        try {
+            const url = isEditModeRoom
+                ? `http://localhost:8080/api/rooms/${roomForm.id}`
+                : 'http://localhost:8080/api/rooms';
+
+            const method = isEditModeRoom ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    ...getAuthHeaders(),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    theaterId: parseInt(roomForm.theaterId),
+                    name: roomForm.name,
+                    totalRows: parseInt(roomForm.totalRows),
+                    totalCols: parseInt(roomForm.totalCols)
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert(isEditModeRoom ? '✅ Đã cập nhật phòng chiếu thành công!' : '✅ Đã thêm phòng chiếu mới thành công!');
+                closeRoomModal();
+                fetchRooms(); // Reload list
+            } else {
+                alert('❌ Lỗi: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Failed to save room:', error);
+            alert('❌ Không thể lưu thông tin phòng chiếu!');
+        }
+    };
+
+    const deleteRoom = async (id, name) => {
+        if (!window.confirm(`Bạn có chắc chắn muốn xóa phòng "${name}"?\n\nLưu ý: Chỉ xóa được nếu phòng chưa có suất chiếu!`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`http://localhost:8080/api/rooms/${id}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert('✅ Đã xóa phòng chiếu thành công!');
+                fetchRooms(); // Reload list
+            } else {
+                alert('❌ Lỗi: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Failed to delete room:', error);
+            alert('❌ Không thể xóa phòng chiếu!');
         }
     };
 
@@ -887,25 +1117,32 @@ const Admin = () => {
             id: null,
             movieId: '',
             theaterId: '',
+            roomId: '',
             showDate: '',
             showTime: '',
             price: 50000
         });
+        setCinemaRooms([]);
         setIsEditModeShowtime(false);
         setShowShowtimeModal(true);
     };
 
-    const openEditShowtimeModal = (showtime) => {
+    const openEditShowtimeModal = async (showtime) => {
         setShowtimeForm({
             id: showtime.id,
             movieId: showtime.movieId,
             theaterId: showtime.theaterId,
+            roomId: showtime.roomId || '',
             showDate: showtime.showDate,
             showTime: showtime.showTime,
             price: showtime.price
         });
         setIsEditModeShowtime(true);
         setShowShowtimeModal(true);
+        // Fetch rooms for selected theater
+        if (showtime.theaterId) {
+            await fetchCinemaRooms(showtime.theaterId);
+        }
     };
 
     const closeShowtimeModal = () => {
@@ -914,19 +1151,27 @@ const Admin = () => {
             id: null,
             movieId: '',
             theaterId: '',
+            roomId: '',
             showDate: '',
             showTime: '',
             price: 50000
         });
+        setCinemaRooms([]);
         setIsEditModeShowtime(false);
     };
 
-    const handleShowtimeFormChange = (e) => {
+    const handleShowtimeFormChange = async (e) => {
         const { name, value } = e.target;
         setShowtimeForm({
             ...showtimeForm,
             [name]: value
         });
+
+        // Fetch cinema rooms when theater is selected
+        if (name === 'theaterId') {
+            setShowtimeForm(prev => ({ ...prev, roomId: '' }));
+            await fetchCinemaRooms(value);
+        }
     };
 
     const saveShowtime = async () => {
@@ -937,6 +1182,10 @@ const Admin = () => {
         }
         if (!showtimeForm.theaterId) {
             alert('Vui lòng chọn rạp!');
+            return;
+        }
+        if (!showtimeForm.roomId) {
+            alert('Vui lòng chọn phòng chiếu!');
             return;
         }
         if (!showtimeForm.showDate) {
@@ -978,6 +1227,7 @@ const Admin = () => {
                 body: JSON.stringify({
                     movieId: parseInt(showtimeForm.movieId),
                     theaterId: parseInt(showtimeForm.theaterId),
+                    roomId: parseInt(showtimeForm.roomId),
                     showDate: showtimeForm.showDate,
                     showTime: showtimeForm.showTime,
                     price: parseFloat(showtimeForm.price)
@@ -1069,6 +1319,10 @@ const Admin = () => {
                         aVal = (a.theaterName || '').toLowerCase();
                         bVal = (b.theaterName || '').toLowerCase();
                         break;
+                    case 'room':
+                        aVal = (a.roomName || '').toLowerCase();
+                        bVal = (b.roomName || '').toLowerCase();
+                        break;
                     case 'date':
                         aVal = a.showDate || '';
                         bVal = b.showDate || '';
@@ -1093,6 +1347,15 @@ const Admin = () => {
 
         return filtered;
     };
+
+    const filteredRooms = (() => {
+        return rooms.filter(room => {
+            if (roomTheaterFilter && room.theaterId !== parseInt(roomTheaterFilter)) {
+                return false;
+            }
+            return true;
+        });
+    })();
 
     if (loading) {
         return (
@@ -1129,6 +1392,13 @@ const Admin = () => {
                     >
                         <span className="tab-icon">🏢</span>
                         <span className="tab-text">Quản lý Rạp</span>
+                    </button>
+                    <button
+                        className={`tab-btn ${activeTab === 'rooms' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('rooms')}
+                    >
+                        <span className="tab-icon">🎪</span>
+                        <span className="tab-text">Quản lý Phòng Chiếu</span>
                     </button>
                     <button
                         className={`tab-btn ${activeTab === 'showtimes' ? 'active' : ''}`}
@@ -1253,7 +1523,7 @@ const Admin = () => {
                                     <table>
                                         <thead>
                                             <tr>
-                                                <th>ID</th>
+                                                <th style={{ width: '50px' }}>TT</th>
                                                 <th
                                                     onClick={() => handleMovieSort('title')}
                                                     style={{ cursor: 'pointer', userSelect: 'none' }}
@@ -1295,9 +1565,9 @@ const Admin = () => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {getFilteredAndSortedMovies().map(movie => (
+                                            {getFilteredAndSortedMovies().map((movie, index) => (
                                                 <tr key={movie.id}>
-                                                    <td>{movie.id}</td>
+                                                    <td>{index + 1}</td>
                                                     <td>
                                                         <strong>{movie.title}</strong>
                                                         {movie.imageUrl && (
@@ -1372,9 +1642,28 @@ const Admin = () => {
                         <div className="content-section">
                             <div className="section-header">
                                 <h2>🏢 Quản lý Rạp</h2>
-                                <button className="add-btn" onClick={openAddTheaterModal} style={{ width: 'auto', padding: '10px 35px' }}>
-                                    + Thêm
-                                </button>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <button
+                                        className="add-btn"
+                                        onClick={migrateCinemaRooms}
+                                        style={{
+                                            width: 'auto',
+                                            padding: '10px 20px',
+                                            backgroundColor: '#ff9800',
+                                            fontSize: '0.9em'
+                                        }}
+                                        title="Xóa tất cả phòng cũ và tạo lại theo format chuẩn"
+                                    >
+                                        🔄 Chuẩn hóa phòng
+                                    </button>
+                                    <button
+                                        className="add-btn"
+                                        onClick={openAddTheaterModal}
+                                        style={{ width: 'auto', padding: '10px 35px' }}
+                                    >
+                                        + Thêm
+                                    </button>
+                                </div>
                             </div>
                             <p className="section-description">Quản lý thông tin rạp chiếu phim</p>
 
@@ -1447,7 +1736,7 @@ const Admin = () => {
                                     <table>
                                         <thead>
                                             <tr>
-                                                <th>ID</th>
+                                                <th style={{ width: '50px' }}>TT</th>
                                                 <th
                                                     onClick={() => handleTheaterSort('name')}
                                                     style={{ cursor: 'pointer', userSelect: 'none' }}
@@ -1477,9 +1766,9 @@ const Admin = () => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {getFilteredAndSortedTheaters().map(theater => (
+                                            {getFilteredAndSortedTheaters().map((theater, index) => (
                                                 <tr key={theater.id}>
-                                                    <td>{theater.id}</td>
+                                                    <td>{index + 1}</td>
                                                     <td><strong>{theater.name}</strong></td>
                                                     <td>{theater.city || '-'}</td>
                                                     <td>{theater.address || '-'}</td>
@@ -1497,6 +1786,108 @@ const Admin = () => {
                                                             onClick={() => deleteTheater(theater.id, theater.name)}
                                                         >
                                                             Xóa
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === 'rooms' && (
+                        <div className="content-section">
+                            <div className="section-header">
+                                <h2>🎪 Quản lý Phòng Chiếu</h2>
+                                <button className="add-btn" onClick={openAddRoomModal} style={{ width: 'auto', padding: '10px 35px' }}>
+                                    + Thêm
+                                </button>
+                            </div>
+                            <p className="section-description">Tùy chỉnh số ghế và thông tin từng phòng chiếu</p>
+
+                            {/* Theater Filter */}
+                            <div style={{ marginBottom: '20px' }}>
+                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                                    Lọc theo rạp:
+                                </label>
+                                <select
+                                    value={roomTheaterFilter}
+                                    onChange={(e) => setRoomTheaterFilter(e.target.value)}
+                                    style={{
+                                        padding: '10px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #ddd',
+                                        fontSize: '14px',
+                                        minWidth: '250px'
+                                    }}
+                                >
+                                    <option value="">Tất cả rạp</option>
+                                    {theaters.map(theater => (
+                                        <option key={theater.id} value={theater.id}>
+                                            {theater.name} {theater.city ? `- ${theater.city}` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Rooms Table */}
+                            {filteredRooms.length === 0 ? (
+                                <p style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+                                    Không có phòng chiếu nào
+                                </p>
+                            ) : (
+                                <div className="data-table">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th style={{ width: '50px' }}>TT</th>
+                                                <th>Tên phòng</th>
+                                                <th>Rạp chiếu</th>
+                                                <th>Thành phố</th>
+                                                <th>Số hàng</th>
+                                                <th>Số ghế/hàng</th>
+                                                <th>Tổng ghế</th>
+                                                <th style={{ width: '150px' }}>Thao tác</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {filteredRooms.map((room, index) => (
+                                                <tr key={room.id}>
+                                                    <td>{index + 1}</td>
+                                                    <td><strong>{room.name}</strong></td>
+                                                    <td>{room.theaterName}</td>
+                                                    <td>
+                                                        {theaters.find(t => t.id === room.theaterId)?.city || 'N/A'}
+                                                    </td>
+                                                    <td>{room.totalRows}</td>
+                                                    <td>{room.totalCols}</td>
+                                                    <td>
+                                                        <span style={{
+                                                            background: '#e3f2fd',
+                                                            color: '#1976d2',
+                                                            padding: '4px 12px',
+                                                            borderRadius: '12px',
+                                                            fontWeight: 'bold'
+                                                        }}>
+                                                            {room.totalSeats} ghế
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <button
+                                                            className="action-btn edit"
+                                                            onClick={() => openEditRoomModal(room)}
+                                                            title="Chỉnh sửa"
+                                                        >
+                                                            ✏️
+                                                        </button>
+                                                        <button
+                                                            className="action-btn delete"
+                                                            onClick={() => deleteRoom(room.id, room.name)}
+                                                            title="Xóa"
+                                                        >
+                                                            🗑️
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -1617,7 +2008,7 @@ const Admin = () => {
                                     <table>
                                         <thead>
                                             <tr>
-                                                <th>ID</th>
+                                                <th style={{ width: '50px' }}>TT</th>
                                                 <th
                                                     onClick={() => handleShowtimeSort('movie')}
                                                     style={{ cursor: 'pointer', userSelect: 'none' }}
@@ -1629,6 +2020,12 @@ const Admin = () => {
                                                     style={{ cursor: 'pointer', userSelect: 'none' }}
                                                 >
                                                     Rạp {showtimeSortField === 'theater' ? (showtimeSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleShowtimeSort('room')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Phòng {showtimeSortField === 'room' ? (showtimeSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
                                                 </th>
                                                 <th
                                                     onClick={() => handleShowtimeSort('date')}
@@ -1653,11 +2050,12 @@ const Admin = () => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {getFilteredAndSortedShowtimes().map(showtime => (
+                                            {getFilteredAndSortedShowtimes().map((showtime, index) => (
                                                 <tr key={showtime.id}>
-                                                    <td>{showtime.id}</td>
+                                                    <td>{index + 1}</td>
                                                     <td><strong>{showtime.movieTitle || 'N/A'}</strong></td>
                                                     <td>{showtime.theaterName || 'N/A'}</td>
+                                                    <td>{showtime.roomName || 'N/A'}</td>
                                                     <td>{showtime.showDate}</td>
                                                     <td>{showtime.showTime}</td>
                                                     <td>{(showtime.price || 0).toLocaleString('vi-VN')}₫</td>
@@ -1711,7 +2109,7 @@ const Admin = () => {
                                     <table>
                                         <thead>
                                             <tr>
-                                                <th>ID</th>
+                                                <th style={{ width: '50px' }}>TT</th>
                                                 <th>Tên</th>
                                                 <th>Username</th>
                                                 <th>Email</th>
@@ -1724,9 +2122,9 @@ const Admin = () => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {users.map(user => (
+                                            {users.map((user, index) => (
                                                 <tr key={user.id}>
-                                                    <td>{user.id}</td>
+                                                    <td>{index + 1}</td>
                                                     <td><strong>{user.name}</strong></td>
                                                     <td>{user.username}</td>
                                                     <td>{user.email || '-'}</td>
@@ -2195,6 +2593,83 @@ const Admin = () => {
                                     required
                                 />
                             </div>
+
+                            <div style={{
+                                background: '#fff3e0',
+                                border: '1px solid #ffb74d',
+                                borderRadius: '8px',
+                                padding: '16px',
+                                marginTop: '16px'
+                            }}>
+                                <h4 style={{ margin: '0 0 12px 0', color: '#f57c00', fontSize: '1em' }}>
+                                    🎫 Cấu hình số ghế mặc định cho tất cả phòng
+                                </h4>
+                                <p style={{ fontSize: '0.9em', color: '#666', margin: '0 0 12px 0' }}>
+                                    Khi tạo rạp, tất cả phòng sẽ có cùng số ghế. Bạn có thể tùy chỉnh từng phòng sau.
+                                </p>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                    <div className="form-group" style={{ margin: 0 }}>
+                                        <label>Số hàng ghế <span className="required">*</span></label>
+                                        <input
+                                            type="number"
+                                            name="defaultRows"
+                                            value={theaterForm.defaultRows}
+                                            onChange={handleTheaterFormChange}
+                                            min={1}
+                                            max={20}
+                                            required
+                                            style={{ width: '100%' }}
+                                        />
+                                    </div>
+                                    <div className="form-group" style={{ margin: 0 }}>
+                                        <label>Số ghế mỗi hàng <span className="required">*</span></label>
+                                        <input
+                                            type="number"
+                                            name="defaultCols"
+                                            value={theaterForm.defaultCols}
+                                            onChange={handleTheaterFormChange}
+                                            min={1}
+                                            max={20}
+                                            required
+                                            style={{ width: '100%' }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div style={{
+                                    marginTop: '12px',
+                                    padding: '8px 12px',
+                                    background: '#fff',
+                                    borderRadius: '6px',
+                                    fontSize: '0.9em',
+                                    color: '#333'
+                                }}>
+                                    <strong>📊 Tổng số ghế mỗi phòng:</strong>{' '}
+                                    <span style={{ color: '#f57c00', fontWeight: 'bold', fontSize: '1.1em' }}>
+                                        {theaterForm.defaultRows * theaterForm.defaultCols} ghế
+                                    </span>
+                                    {' '}({theaterForm.defaultRows} hàng × {theaterForm.defaultCols} ghế)
+                                </div>
+                            </div>
+
+                            <div style={{
+                                background: '#e8f5e9',
+                                padding: '12px',
+                                borderRadius: '8px',
+                                marginTop: '12px',
+                                fontSize: '0.9em',
+                                color: '#2e7d32',
+                                lineHeight: '1.6'
+                            }}>
+                                <strong>ℹ️ Lưu ý:</strong>
+                                <ul style={{ margin: '8px 0 0 20px', paddingLeft: 0 }}>
+                                    <li>Hệ thống sẽ tự động tạo các phòng với tên: <strong>Phòng 01, Phòng 02,...</strong></li>
+                                    {isEditMode && (
+                                        <li>Tăng số phòng sẽ tạo thêm phòng mới. Giảm số phòng chỉ được nếu phòng chưa có suất chiếu.</li>
+                                    )}
+                                </ul>
+                            </div>
                         </div>
 
                         <div className="modal-footer">
@@ -2384,6 +2859,144 @@ const Admin = () => {
                 </div>
             )}
 
+            {/* Room Modal */}
+            {showRoomModal && (
+                <div className="modal-overlay"
+                    onMouseDown={(e) => {
+                        if (e.target === e.currentTarget) {
+                            e.currentTarget.dataset.mousedownOnOverlay = 'true';
+                        }
+                    }}
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget && e.currentTarget.dataset.mousedownOnOverlay === 'true') {
+                            closeRoomModal();
+                        }
+                        delete e.currentTarget.dataset.mousedownOnOverlay;
+                    }}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>{isEditModeRoom ? '✏️ Chỉnh sửa phòng chiếu' : '➕ Thêm phòng chiếu mới'}</h2>
+                            <button className="modal-close" onClick={closeRoomModal}>×</button>
+                        </div>
+
+                        <div className="modal-body">
+                            <div className="form-group">
+                                <label>Rạp chiếu <span className="required">*</span></label>
+                                <select
+                                    name="theaterId"
+                                    value={roomForm.theaterId}
+                                    onChange={handleRoomFormChange}
+                                    required
+                                    disabled={isEditModeRoom}
+                                >
+                                    <option value="">-- Chọn rạp --</option>
+                                    {theaters.map(theater => (
+                                        <option key={theater.id} value={theater.id}>
+                                            {theater.name} {theater.city ? `- ${theater.city}` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                                {isEditModeRoom && (
+                                    <small style={{ display: 'block', marginTop: '8px', color: '#666' }}>
+                                        ℹ️ Không thể thay đổi rạp chiếu khi chỉnh sửa
+                                    </small>
+                                )}
+                            </div>
+
+                            <div className="form-group">
+                                <label>Tên phòng <span className="required">*</span></label>
+                                <input
+                                    type="text"
+                                    name="name"
+                                    value={roomForm.name}
+                                    onChange={handleRoomFormChange}
+                                    placeholder="VD: Phòng 01, Phòng VIP, IMAX"
+                                    required
+                                />
+                            </div>
+
+                            <div style={{
+                                background: '#fff3e0',
+                                border: '1px solid #ffb74d',
+                                borderRadius: '8px',
+                                padding: '16px',
+                                marginBottom: '16px'
+                            }}>
+                                <h4 style={{ margin: '0 0 12px 0', color: '#f57c00', fontSize: '1em' }}>
+                                    🎫 Cấu hình số ghế cho phòng này
+                                </h4>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                    <div className="form-group" style={{ margin: 0 }}>
+                                        <label>Số hàng ghế <span className="required">*</span></label>
+                                        <input
+                                            type="number"
+                                            name="totalRows"
+                                            value={roomForm.totalRows}
+                                            onChange={handleRoomFormChange}
+                                            min={1}
+                                            max={20}
+                                            required
+                                            style={{ width: '100%' }}
+                                        />
+                                    </div>
+                                    <div className="form-group" style={{ margin: 0 }}>
+                                        <label>Số ghế mỗi hàng <span className="required">*</span></label>
+                                        <input
+                                            type="number"
+                                            name="totalCols"
+                                            value={roomForm.totalCols}
+                                            onChange={handleRoomFormChange}
+                                            min={1}
+                                            max={20}
+                                            required
+                                            style={{ width: '100%' }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div style={{
+                                    marginTop: '12px',
+                                    padding: '8px 12px',
+                                    background: '#fff',
+                                    borderRadius: '6px',
+                                    fontSize: '0.9em',
+                                    color: '#333'
+                                }}>
+                                    <strong>📊 Tổng số ghế:</strong>{' '}
+                                    <span style={{ color: '#f57c00', fontWeight: 'bold', fontSize: '1.2em' }}>
+                                        {roomForm.totalRows * roomForm.totalCols} ghế
+                                    </span>
+                                    {' '}({roomForm.totalRows} hàng × {roomForm.totalCols} ghế)
+                                </div>
+                            </div>
+
+                            {isEditModeRoom && (
+                                <div style={{
+                                    background: '#fff9c4',
+                                    border: '1px solid #fbc02d',
+                                    borderRadius: '8px',
+                                    padding: '12px',
+                                    fontSize: '0.9em',
+                                    color: '#f57f17'
+                                }}>
+                                    <strong>⚠️ Lưu ý:</strong> Thay đổi số ghế có thể ảnh hưởng đến các suất chiếu hiện tại.
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="modal-footer">
+                            <button className="btn-cancel" onClick={closeRoomModal}>
+                                Hủy
+                            </button>
+                            <button className="btn-save" onClick={saveRoom}>
+                                {isEditModeRoom ? '💾 Cập nhật' : '➕ Thêm mới'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Showtime Modal */}
             {showShowtimeModal && (
                 <div className="modal-overlay"
@@ -2437,6 +3050,29 @@ const Admin = () => {
                                         </option>
                                     ))}
                                 </select>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Phòng chiếu <span className="required">*</span></label>
+                                <select
+                                    name="roomId"
+                                    value={showtimeForm.roomId}
+                                    onChange={handleShowtimeFormChange}
+                                    required
+                                    disabled={!showtimeForm.theaterId}
+                                >
+                                    <option value="">-- Chọn phòng --</option>
+                                    {cinemaRooms.map(room => (
+                                        <option key={room.id} value={room.id}>
+                                            {room.name} ({room.totalSeats || (room.totalRows * room.totalCols)} ghế)
+                                        </option>
+                                    ))}
+                                </select>
+                                {!showtimeForm.theaterId && (
+                                    <span className="hint" style={{ fontSize: '0.9em', color: '#999', marginTop: '4px', display: 'block' }}>
+                                        Vui lòng chọn rạp trước
+                                    </span>
+                                )}
                             </div>
 
                             <div style={{ display: 'flex', gap: '16px' }}>
@@ -2584,16 +3220,16 @@ const Admin = () => {
                                             <table>
                                                 <thead>
                                                     <tr>
-                                                        <th>ID</th>
+                                                        <th style={{ width: '50px' }}>TT</th>
                                                         <th>Tên</th>
                                                         <th>Mô tả</th>
                                                         <th>Thao tác</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {genres.map(genre => (
+                                                    {genres.map((genre, index) => (
                                                         <tr key={genre.id}>
-                                                            <td>{genre.id}</td>
+                                                            <td>{index + 1}</td>
                                                             <td><strong>{genre.name}</strong></td>
                                                             <td>{genre.description || '-'}</td>
                                                             <td>
