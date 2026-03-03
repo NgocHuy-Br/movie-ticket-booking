@@ -90,6 +90,8 @@ const Admin = () => {
     });
     const [isEditModeRoom, setIsEditModeRoom] = useState(false);
     const [roomTheaterFilter, setRoomTheaterFilter] = useState('');
+    const [roomSortField, setRoomSortField] = useState('');
+    const [roomSortOrder, setRoomSortOrder] = useState('asc');
 
     // Genre management states
     const [genres, setGenres] = useState([]);
@@ -702,6 +704,15 @@ const Admin = () => {
         } else {
             setTheaterSortField(field);
             setTheaterSortOrder('asc');
+        }
+    };
+
+    const handleRoomSort = (field) => {
+        if (roomSortField === field) {
+            setRoomSortOrder(roomSortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setRoomSortField(field);
+            setRoomSortOrder('asc');
         }
     };
 
@@ -1349,12 +1360,55 @@ const Admin = () => {
     };
 
     const filteredRooms = (() => {
-        return rooms.filter(room => {
+        let filtered = rooms.filter(room => {
             if (roomTheaterFilter && room.theaterId !== parseInt(roomTheaterFilter)) {
                 return false;
             }
             return true;
         });
+
+        // Sort
+        if (roomSortField) {
+            filtered.sort((a, b) => {
+                let aVal, bVal;
+                switch (roomSortField) {
+                    case 'name':
+                        aVal = a.name || '';
+                        bVal = b.name || '';
+                        break;
+                    case 'theater':
+                        aVal = a.theaterName || '';
+                        bVal = b.theaterName || '';
+                        break;
+                    case 'city':
+                        const aTheater = theaters.find(t => t.id === a.theaterId);
+                        const bTheater = theaters.find(t => t.id === b.theaterId);
+                        aVal = aTheater?.city || '';
+                        bVal = bTheater?.city || '';
+                        break;
+                    case 'totalRows':
+                        aVal = a.totalRows || 0;
+                        bVal = b.totalRows || 0;
+                        break;
+                    case 'totalCols':
+                        aVal = a.totalCols || 0;
+                        bVal = b.totalCols || 0;
+                        break;
+                    case 'totalSeats':
+                        aVal = a.totalSeats || 0;
+                        bVal = b.totalSeats || 0;
+                        break;
+                    default:
+                        return 0;
+                }
+
+                if (aVal < bVal) return roomSortOrder === 'asc' ? -1 : 1;
+                if (aVal > bVal) return roomSortOrder === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        return filtered;
     })();
 
     if (loading) {
@@ -1455,6 +1509,24 @@ const Admin = () => {
                             <p className="section-description">Thêm, sửa, xóa thông tin phim</p>
 
                             <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', alignItems: 'center' }}>
+                                <select
+                                    value={movieGenreFilter}
+                                    onChange={(e) => setMovieGenreFilter(e.target.value)}
+                                    style={{
+                                        padding: '10px 12px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #ddd',
+                                        fontSize: '14px',
+                                        cursor: 'pointer',
+                                        minWidth: '200px'
+                                    }}
+                                >
+                                    <option value="">🎭 Tất cả thể loại</option>
+                                    {getUniqueGenres().map(genre => (
+                                        <option key={genre} value={genre}>{genre}</option>
+                                    ))}
+                                </select>
+
                                 <div style={{ position: 'relative', flex: '1', maxWidth: '400px' }}>
                                     <input
                                         type="text"
@@ -1490,24 +1562,6 @@ const Admin = () => {
                                         </button>
                                     )}
                                 </div>
-
-                                <select
-                                    value={movieGenreFilter}
-                                    onChange={(e) => setMovieGenreFilter(e.target.value)}
-                                    style={{
-                                        padding: '10px 12px',
-                                        borderRadius: '8px',
-                                        border: '1px solid #ddd',
-                                        fontSize: '14px',
-                                        cursor: 'pointer',
-                                        minWidth: '200px'
-                                    }}
-                                >
-                                    <option value="">🎭 Tất cả thể loại</option>
-                                    {getUniqueGenres().map(genre => (
-                                        <option key={genre} value={genre}>{genre}</option>
-                                    ))}
-                                </select>
                             </div>
 
                             {movies.length === 0 ? (
@@ -1668,6 +1722,24 @@ const Admin = () => {
                             <p className="section-description">Quản lý thông tin rạp chiếu phim</p>
 
                             <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', alignItems: 'center' }}>
+                                <select
+                                    value={theaterCityFilter}
+                                    onChange={(e) => setTheaterCityFilter(e.target.value)}
+                                    style={{
+                                        padding: '10px 12px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #ddd',
+                                        fontSize: '14px',
+                                        cursor: 'pointer',
+                                        minWidth: '200px'
+                                    }}
+                                >
+                                    <option value="">🏙️ Tất cả thành phố</option>
+                                    {getUniqueCities().map(city => (
+                                        <option key={city} value={city}>{city}</option>
+                                    ))}
+                                </select>
+
                                 <div style={{ position: 'relative', flex: '1', maxWidth: '400px' }}>
                                     <input
                                         type="text"
@@ -1703,24 +1775,6 @@ const Admin = () => {
                                         </button>
                                     )}
                                 </div>
-
-                                <select
-                                    value={theaterCityFilter}
-                                    onChange={(e) => setTheaterCityFilter(e.target.value)}
-                                    style={{
-                                        padding: '10px 12px',
-                                        borderRadius: '8px',
-                                        border: '1px solid #ddd',
-                                        fontSize: '14px',
-                                        cursor: 'pointer',
-                                        minWidth: '200px'
-                                    }}
-                                >
-                                    <option value="">🏙️ Tất cả thành phố</option>
-                                    {getUniqueCities().map(city => (
-                                        <option key={city} value={city}>{city}</option>
-                                    ))}
-                                </select>
                             </div>
 
                             {theaters.length === 0 ? (
@@ -1843,12 +1897,42 @@ const Admin = () => {
                                         <thead>
                                             <tr>
                                                 <th style={{ width: '50px' }}>TT</th>
-                                                <th>Tên phòng</th>
-                                                <th>Rạp chiếu</th>
-                                                <th>Thành phố</th>
-                                                <th>Số hàng</th>
-                                                <th>Số ghế/hàng</th>
-                                                <th>Tổng ghế</th>
+                                                <th
+                                                    onClick={() => handleRoomSort('name')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Tên phòng {roomSortField === 'name' ? (roomSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleRoomSort('theater')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Rạp chiếu {roomSortField === 'theater' ? (roomSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleRoomSort('city')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Thành phố {roomSortField === 'city' ? (roomSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleRoomSort('totalRows')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Số hàng {roomSortField === 'totalRows' ? (roomSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleRoomSort('totalCols')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Số ghế/hàng {roomSortField === 'totalCols' ? (roomSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleRoomSort('totalSeats')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Tổng ghế {roomSortField === 'totalSeats' ? (roomSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
                                                 <th style={{ width: '150px' }}>Thao tác</th>
                                             </tr>
                                         </thead>
@@ -1916,6 +2000,34 @@ const Admin = () => {
                                 marginBottom: '20px',
                                 alignItems: 'center'
                             }}>
+                                {/* Theater Filter Dropdown */}
+                                <div style={{ flex: '0 0 250px' }}>
+                                    <select
+                                        value={showtimeTheaterFilter}
+                                        onChange={(e) => setShowtimeTheaterFilter(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px 20px',
+                                            fontSize: '15px',
+                                            border: '2px solid #e0e0e0',
+                                            borderRadius: '8px',
+                                            outline: 'none',
+                                            cursor: 'pointer',
+                                            backgroundColor: 'white',
+                                            transition: 'border-color 0.3s'
+                                        }}
+                                        onFocus={(e) => e.target.style.borderColor = '#5e72e4'}
+                                        onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                                    >
+                                        <option value="">🎭 Tất cả rạp</option>
+                                        {theaters.map(theater => (
+                                            <option key={theater.id} value={theater.id}>
+                                                {theater.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
                                 {/* Search Box */}
                                 <div style={{
                                     position: 'relative',
@@ -1964,34 +2076,6 @@ const Admin = () => {
                                             ×
                                         </button>
                                     )}
-                                </div>
-
-                                {/* Theater Filter Dropdown */}
-                                <div style={{ flex: '0 0 250px' }}>
-                                    <select
-                                        value={showtimeTheaterFilter}
-                                        onChange={(e) => setShowtimeTheaterFilter(e.target.value)}
-                                        style={{
-                                            width: '100%',
-                                            padding: '12px 20px',
-                                            fontSize: '15px',
-                                            border: '2px solid #e0e0e0',
-                                            borderRadius: '8px',
-                                            outline: 'none',
-                                            cursor: 'pointer',
-                                            backgroundColor: 'white',
-                                            transition: 'border-color 0.3s'
-                                        }}
-                                        onFocus={(e) => e.target.style.borderColor = '#5e72e4'}
-                                        onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
-                                    >
-                                        <option value="">🎭 Tất cả rạp</option>
-                                        {theaters.map(theater => (
-                                            <option key={theater.id} value={theater.id}>
-                                                {theater.name}
-                                            </option>
-                                        ))}
-                                    </select>
                                 </div>
                             </div>
 

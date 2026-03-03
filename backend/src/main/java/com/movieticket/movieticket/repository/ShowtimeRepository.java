@@ -7,7 +7,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.List;
 
 @Repository
@@ -30,4 +29,7 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
             @Param("movieId") Long movieId,
             @Param("theaterId") Long theaterId,
             @Param("showDate") LocalDate showDate);
+
+    @Query("SELECT s FROM Showtime s WHERE s.room.id = :roomId AND s.showDate = :showDate")
+    List<Showtime> findByRoomIdAndShowDate(@Param("roomId") Long roomId, @Param("showDate") LocalDate showDate);
 }

@@ -12,6 +12,7 @@ import com.movieticket.movieticket.repository.CinemaRoomRepository;
 import com.movieticket.movieticket.repository.MovieRepository;
 import com.movieticket.movieticket.repository.SeatRepository;
 import com.movieticket.movieticket.repository.ShowtimeRepository;
+import com.movieticket.movieticket.repository.SystemSettingsRepository;
 import com.movieticket.movieticket.repository.TheaterRepository;
 import com.movieticket.movieticket.service.ShowtimeService;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,6 +35,7 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     private final CinemaRoomRepository roomRepository;
     private final SeatRepository seatRepository;
     private final BookingRepository bookingRepository;
+    private final SystemSettingsRepository systemSettingsRepository;
 
     @Override
     public List<ShowtimeDto> getAllShowtimes() {
@@ -79,6 +82,15 @@ public class ShowtimeServiceImpl implements ShowtimeService {
                 .orElseThrow(() -> new RuntimeException("Cinema room not found with id: " + showtimeDto.getRoomId()));
 
         Theater theater = room.getTheater();
+
+        // Validate showtime overlap (including cleanup time)
+        validateShowtimeOverlap(
+                room.getId(),
+                showtimeDto.getShowDate(),
+                showtimeDto.getShowTime(),
+                movie.getDuration(),
+                null // No exclusion for new showtime
+        );
 
         // Get seat configuration from room
         int totalSeats = room.getTotalSeats();
@@ -129,6 +141,15 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         if (showtimeDto.getPrice() != null) {
             showtime.setPrice(showtimeDto.getPrice());
         }
+
+        // Validate showtime overlap after updates (including cleanup time)
+        validateShowtimeOverlap(
+                showtime.getRoom().getId(),
+                showtime.getShowDate(),
+                showtime.getShowTime(),
+                showtime.getMovie().getDuration(),
+                id // Exclude current showtime from overlap check
+        );
 
         Showtime updatedShowtime = showtimeRepository.save(showtime);
         return convertToDto(updatedShowtime);
@@ -208,6 +229,59 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         showtime.setTotalSeats(seats.size());
         showtime.setAvailableSeats(seats.size());
         showtimeRepository.save(showtime);
+    }
+
+    /**
+     * Check if the new showtime overlaps with existing showtimes in the same room
+     * Considers movie duration + cleanup time (MIN_GAP_BETWEEN_SHOWS)
+     */
+    private void validateShowtimeOverlap(Long roomId, LocalDate showDate, LocalTime showTime,
+            Integer movieDuration, Long excludeShowtimeId) {
+        // Get MIN_GAP_BETWEEN_SHOWS from system settings
+        int minGapMinutes = systemSettingsRepository.findBySettingKey("MIN_GAP_BETWEEN_SHOWS")
+                .map(setting -> Integer.parseInt(setting.getSettingValue()))
+                .orElse(30); // Default 30 minutes
+
+        // Calculate end time: showTime + movie duration + cleanup time
+        LocalTime newShowtimeEnd = showTime.plusMinutes(movieDuration + minGapMinutes);
+
+        // Get all showtimes in the same room on the same date
+        List<Showtime> existingShowtimes = showtimeRepository.findByRoomIdAndShowDate(roomId, showDate);
+
+        // Check overlap with each existing showtime
+        for (Showtime existing : existingShowtimes) {
+            // Skip if checking the same showtime (for update case)
+            if (excludeShowtimeId != null && existing.getId().equals(excludeShowtimeId)) {
+                continue;
+            }
+
+            LocalTime existingStart = existing.getShowTime();
+            LocalTime existingEnd = existingStart.plusMinutes(
+                    existing.getMovie().getDuration() + minGapMinutes);
+
+            // Check overlap: new showtime starts before existing ends AND new showtime ends
+            // after existing starts
+            boolean overlaps = showTime.isBefore(existingEnd) && newShowtimeEnd.isAfter(existingStart);
+
+            if (overlaps) {
+                String existingTimeRange = existingStart + " - " + existingEnd;
+                String newTimeRange = showTime + " - " + newShowtimeEnd;
+                String roomName = existing.getRoom().getName();
+                String theaterName = existing.getTheater().getName();
+
+                throw new RuntimeException(
+                        String.format(
+                                "Suất chiếu bị trùng lịch!\n\n" +
+                                        "🏢 Rạp: %s\n" +
+                                        "🎪 Phòng: %s\n" +
+                                        "📅 Ngày: %s\n\n" +
+                                        "❌ Suất chiếu đã có: %s\n" +
+                                        "⚠️ Suất chiếu mới: %s\n\n" +
+                                        "💡 Lưu ý: Đã tính thêm %d phút dọn phòng giữa các suất",
+                                theaterName, roomName, showDate,
+                                existingTimeRange, newTimeRange, minGapMinutes));
+            }
+        }
     }
 
     private ShowtimeDto convertToDto(Showtime showtime) {
