@@ -11,6 +11,14 @@ const MyWallet = () => {
     const [depositAmount, setDepositAmount] = useState('');
     const [isDepositing, setIsDepositing] = useState(false);
     const [filterType, setFilterType] = useState('all'); // all, DEPOSIT, BOOKING_PAYMENT, REFUND
+    const [paymentMethod, setPaymentMethod] = useState('visa'); // 'visa' only
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [visaInfo, setVisaInfo] = useState({
+        cardNumber: '',
+        cardHolder: '',
+        expiryDate: '',
+        cvv: ''
+    });
 
     useEffect(() => {
         const info = getUserInfo();
@@ -37,8 +45,23 @@ const MyWallet = () => {
         }
     };
 
+    const formatMoney = (value) => {
+        if (!value) return '';
+        const number = value.toString().replace(/[^0-9]/g, '');
+        return number.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    };
+
+    const parseMoney = (value) => {
+        return parseFloat(value.toString().replace(/,/g, '')) || 0;
+    };
+
+    const handleDepositAmountChange = (value) => {
+        const formatted = formatMoney(value);
+        setDepositAmount(formatted);
+    };
+
     const handleDeposit = async () => {
-        const amount = parseFloat(depositAmount);
+        const amount = parseMoney(depositAmount);
 
         if (!amount || amount <= 0) {
             alert('Vui lòng nhập số tiền hợp lệ');
@@ -50,8 +73,55 @@ const MyWallet = () => {
             return;
         }
 
+        // Validate Visa card
+        if (!validateVisaCard()) {
+            alert('Thông tin thẻ không hợp lệ. Vui lòng kiểm tra lại!');
+            return;
+        }
+
+        // Show confirmation modal
+        setShowConfirmModal(true);
+    };
+
+    const validateVisaCard = () => {
+        // Card number validation (16 digits)
+        const cardNumber = visaInfo.cardNumber.replace(/\s/g, '');
+        if (!cardNumber || !/^\d{16}$/.test(cardNumber)) {
+            return false;
+        }
+
+        // Card holder validation (letters and spaces only)
+        if (!visaInfo.cardHolder.trim() || !/^[a-zA-Z\s]+$/.test(visaInfo.cardHolder)) {
+            return false;
+        }
+
+        // Expiry date validation (MM/YY format)
+        if (!visaInfo.expiryDate || !/^(0[1-9]|1[0-2])\/\d{2}$/.test(visaInfo.expiryDate)) {
+            return false;
+        }
+
+        // Check if card is expired
+        const [month, year] = visaInfo.expiryDate.split('/');
+        const expiry = new Date(2000 + parseInt(year), parseInt(month) - 1);
+        const now = new Date();
+        if (expiry < now) {
+            return false;
+        }
+
+        // CVV validation (3-4 digits)
+        if (!visaInfo.cvv || !/^\d{3,4}$/.test(visaInfo.cvv)) {
+            return false;
+        }
+
+        return true;
+    };
+
+    const handleConfirmDeposit = async () => {
+        const amount = parseMoney(depositAmount);
+
         try {
             setIsDepositing(true);
+            setShowConfirmModal(false);
             const token = localStorage.getItem('token');
 
             await axios.post(
@@ -63,12 +133,16 @@ const MyWallet = () => {
             alert('Nạp tiền thành công!');
             setShowDepositModal(false);
             setDepositAmount('');
+            setVisaInfo({ cardNumber: '', cardHolder: '', expiryDate: '', cvv: '' });
 
             // Refresh transactions and user info
             fetchTransactions();
 
-            // Update user info in localStorage
-            const updatedInfo = { ...userInfo, accountBalance: userInfo.accountBalance + amount };
+            // Fetch updated user info from backend
+            const userResponse = await axios.get('http://localhost:8080/api/auth/me', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const updatedInfo = userResponse.data.data;
             localStorage.setItem('userInfo', JSON.stringify(updatedInfo));
             setUserInfo(updatedInfo);
 
@@ -79,6 +153,36 @@ const MyWallet = () => {
         } finally {
             setIsDepositing(false);
         }
+    };
+
+    const handleVisaInputChange = (field, value) => {
+        let formattedValue = value;
+
+        // Format card number (add spaces every 4 digits)
+        if (field === 'cardNumber') {
+            formattedValue = value.replace(/\s/g, '').replace(/(\d{4})/g, '$1 ').trim();
+            if (formattedValue.length > 19) formattedValue = formattedValue.slice(0, 19); // 16 digits + 3 spaces
+        }
+
+        // Format expiry date (add / after 2 digits)
+        if (field === 'expiryDate') {
+            formattedValue = value.replace(/\D/g, '');
+            if (formattedValue.length >= 2) {
+                formattedValue = formattedValue.slice(0, 2) + '/' + formattedValue.slice(2, 4);
+            }
+        }
+
+        // Format CVV (only digits, max 4)
+        if (field === 'cvv') {
+            formattedValue = value.replace(/\D/g, '').slice(0, 4);
+        }
+
+        // Format card holder (only letters and spaces)
+        if (field === 'cardHolder') {
+            formattedValue = value.replace(/[^a-zA-Z\s]/g, '').toUpperCase();
+        }
+
+        setVisaInfo(prev => ({ ...prev, [field]: formattedValue }));
     };
 
     const formatCurrency = (amount) => {
@@ -128,8 +232,6 @@ const MyWallet = () => {
                 return type;
         }
     };
-
-    const presetAmounts = [100000, 200000, 500000, 1000000];
 
     if (loading && transactions.length === 0) {
         return <div className="loading">Đang tải...</div>;
@@ -211,7 +313,11 @@ const MyWallet = () => {
                             <h3>Nạp tiền vào ví</h3>
                             <button
                                 className="close-btn"
-                                onClick={() => setShowDepositModal(false)}
+                                onClick={() => {
+                                    setShowDepositModal(false);
+                                    setVisaInfo({ cardNumber: '', cardHolder: '', expiryDate: '', cvv: '' });
+                                    setDepositAmount('');
+                                }}
                                 disabled={isDepositing}
                             >
                                 ✕
@@ -219,36 +325,79 @@ const MyWallet = () => {
                         </div>
 
                         <div className="deposit-form">
-                            <div className="preset-amounts">
-                                {presetAmounts.map((amount) => (
-                                    <button
-                                        key={amount}
-                                        className={`preset-btn ${depositAmount === amount.toString() ? 'active' : ''}`}
-                                        onClick={() => setDepositAmount(amount.toString())}
-                                        disabled={isDepositing}
-                                    >
-                                        {formatCurrency(amount)}
-                                    </button>
-                                ))}
-                            </div>
-
                             <div className="form-group">
-                                <label>Số tiền nạp</label>
+                                <label>Số tiền nạp *</label>
                                 <input
-                                    type="number"
+                                    type="text"
                                     value={depositAmount}
-                                    onChange={(e) => setDepositAmount(e.target.value)}
-                                    placeholder="Nhập số tiền"
-                                    min="10000"
+                                    onChange={(e) => handleDepositAmountChange(e.target.value)}
                                     disabled={isDepositing}
                                 />
                                 <small>Số tiền tối thiểu: 10,000 VNĐ</small>
                             </div>
 
+                            <div className="form-group">
+                                <label>Thông tin thẻ Visa/Mastercard *</label>
+                            </div>
+
+                            <div className="visa-form">
+                                <div className="form-group">
+                                    <label>Số thẻ *</label>
+                                    <input
+                                        type="text"
+                                        value={visaInfo.cardNumber}
+                                        onChange={(e) => handleVisaInputChange('cardNumber', e.target.value)}
+                                        placeholder="1234 5678 9012 3456"
+                                        disabled={isDepositing}
+                                    />
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Tên chủ thẻ *</label>
+                                    <input
+                                        type="text"
+                                        value={visaInfo.cardHolder}
+                                        onChange={(e) => handleVisaInputChange('cardHolder', e.target.value)}
+                                        placeholder="NGUYEN VAN A"
+                                        disabled={isDepositing}
+                                    />
+                                </div>
+
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label>Ngày hết hạn *</label>
+                                        <input
+                                            type="text"
+                                            value={visaInfo.expiryDate}
+                                            onChange={(e) => handleVisaInputChange('expiryDate', e.target.value)}
+                                            placeholder="MM/YY"
+                                            disabled={isDepositing}
+                                            maxLength="5"
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>CVV *</label>
+                                        <input
+                                            type="text"
+                                            value={visaInfo.cvv}
+                                            onChange={(e) => handleVisaInputChange('cvv', e.target.value)}
+                                            placeholder="123"
+                                            disabled={isDepositing}
+                                            maxLength="4"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="form-actions">
                                 <button
                                     className="cancel-btn"
-                                    onClick={() => setShowDepositModal(false)}
+                                    onClick={() => {
+                                        setShowDepositModal(false);
+                                        setVisaInfo({ cardNumber: '', cardHolder: '', expiryDate: '', cvv: '' });
+                                        setDepositAmount('');
+                                    }}
                                     disabled={isDepositing}
                                 >
                                     Hủy
@@ -258,9 +407,42 @@ const MyWallet = () => {
                                     onClick={handleDeposit}
                                     disabled={isDepositing}
                                 >
-                                    {isDepositing ? 'Đang xử lý...' : 'Xác nhận'}
+                                    {isDepositing ? 'Đang xử lý...' : 'Tiếp tục'}
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Confirmation Modal */}
+            {showConfirmModal && (
+                <div className="modal-overlay" onClick={() => !isDepositing && setShowConfirmModal(false)}>
+                    <div className="modal-content confirm-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3>Xác nhận nạp tiền</h3>
+                        </div>
+                        <div className="confirm-content">
+                            <p>Bạn có chắc chắn muốn nạp <strong>{formatCurrency(parseMoney(depositAmount))}</strong></p>
+                            <p>từ tài khoản thẻ <strong>**** **** **** {visaInfo.cardNumber.replace(/\s/g, '').slice(-4)}</strong></p>
+                            <p>của <strong>{visaInfo.cardHolder}</strong></p>
+                            <p>vào ví không?</p>
+                        </div>
+                        <div className="form-actions">
+                            <button
+                                className="cancel-btn"
+                                onClick={() => setShowConfirmModal(false)}
+                                disabled={isDepositing}
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                className="confirm-btn"
+                                onClick={handleConfirmDeposit}
+                                disabled={isDepositing}
+                            >
+                                {isDepositing ? 'Đang xử lý...' : 'Xác nhận'}
+                            </button>
                         </div>
                     </div>
                 </div>

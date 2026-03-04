@@ -116,6 +116,7 @@ public class AuthServiceImpl implements AuthService {
                 .avatar(user.getAvatar())
                 .role(user.getRole().name())
                 .membershipLevel(user.getMembershipLevel() != null ? user.getMembershipLevel().name() : null)
+                .accountBalance(user.getAccountBalance())
                 .build();
     }
 }

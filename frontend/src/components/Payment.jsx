@@ -6,13 +6,14 @@ import './Payment.css';
 const Payment = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   // Lấy thông tin từ Booking page
   const bookingData = location.state || {
     movieTitle: 'Avengers: Endgame',
     movieId: 1,
     theater: 'CGV Vincom Center',
-    time: '11:00',
+    showDate: '2024-03-04',
+    showTime: '11:00',
     seats: ['A1', 'A2'],
     totalPrice: 170000
   };
@@ -21,7 +22,14 @@ const Payment = () => {
     fullName: '',
     email: '',
     phone: '',
-    paymentMethod: 'momo' // momo, zalopay, bank, movie
+    paymentMethod: 'wallet' // visa, wallet
+  });
+
+  const [visaInfo, setVisaInfo] = useState({
+    cardNumber: '',
+    cardHolder: '',
+    expiryDate: '',
+    cvv: ''
   });
 
   const [accountBalance, setAccountBalance] = useState(0);
@@ -30,35 +38,42 @@ const Payment = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successData, setSuccessData] = useState(null);
 
-  // Load thông tin user và số dư từ localStorage khi component mount
+  // Load thông tin user và fetch số dư từ backend
   useEffect(() => {
-    try {
-      const userInfoStr = localStorage.getItem('userInfo');
-      if (userInfoStr) {
-        const userInfo = JSON.parse(userInfoStr);
-        setPaymentInfo(prev => ({
-          ...prev,
-          fullName: userInfo.fullName || '',
-          email: userInfo.email || '',
-          phone: userInfo.phone || ''
-        }));
-      }
+    const loadUserInfo = async () => {
+      try {
+        const userInfoStr = localStorage.getItem('userInfo');
+        if (userInfoStr) {
+          const userInfo = JSON.parse(userInfoStr);
+          setPaymentInfo(prev => ({
+            ...prev,
+            fullName: userInfo.fullName || '',
+            email: userInfo.email || '',
+            phone: userInfo.phone || ''
+          }));
+        }
 
-      // Load số dư tài khoản
-      const balance = localStorage.getItem('accountBalance');
-      if (balance) {
-        setAccountBalance(parseFloat(balance));
-      } else {
-        setAccountBalance(0);
+        // Fetch số dư tài khoản từ backend
+        const token = localStorage.getItem('token');
+        if (token) {
+          const response = await fetch('http://localhost:8080/api/auth/me', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const data = await response.json();
+          if (data.success && data.data.accountBalance !== undefined) {
+            setAccountBalance(data.data.accountBalance);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user info:', error);
       }
-    } catch (error) {
-      console.error('Error reading user info:', error);
-    }
+    };
+    loadUserInfo();
   }, []);
 
   // Kiểm tra số dư khi paymentMethod thay đổi
   useEffect(() => {
-    if (paymentInfo.paymentMethod === 'movie') {
+    if (paymentInfo.paymentMethod === 'wallet') {
       if (accountBalance < bookingData.totalPrice) {
         setBalanceError('Số dư không đủ. Vui lòng nạp thêm hoặc chọn hình thức thanh toán khác.');
       } else {
@@ -79,6 +94,60 @@ const Payment = () => {
     }
   };
 
+  const validateVisaCard = () => {
+    const cardNumber = visaInfo.cardNumber.replace(/\s/g, '');
+    if (!cardNumber || !/^\d{16}$/.test(cardNumber)) {
+      return false;
+    }
+
+    if (!visaInfo.cardHolder.trim() || !/^[a-zA-Z\s]+$/.test(visaInfo.cardHolder)) {
+      return false;
+    }
+
+    if (!visaInfo.expiryDate || !/^(0[1-9]|1[0-2])\/\d{2}$/.test(visaInfo.expiryDate)) {
+      return false;
+    }
+
+    const [month, year] = visaInfo.expiryDate.split('/');
+    const expiry = new Date(2000 + parseInt(year), parseInt(month) - 1);
+    const now = new Date();
+    if (expiry < now) {
+      return false;
+    }
+
+    if (!visaInfo.cvv || !/^\d{3,4}$/.test(visaInfo.cvv)) {
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleVisaInputChange = (field, value) => {
+    let formattedValue = value;
+
+    if (field === 'cardNumber') {
+      formattedValue = value.replace(/\s/g, '').replace(/(\d{4})/g, '$1 ').trim();
+      if (formattedValue.length > 19) formattedValue = formattedValue.slice(0, 19);
+    }
+
+    if (field === 'expiryDate') {
+      formattedValue = value.replace(/\D/g, '');
+      if (formattedValue.length >= 2) {
+        formattedValue = formattedValue.slice(0, 2) + '/' + formattedValue.slice(2, 4);
+      }
+    }
+
+    if (field === 'cvv') {
+      formattedValue = value.replace(/\D/g, '').slice(0, 4);
+    }
+
+    if (field === 'cardHolder') {
+      formattedValue = value.replace(/[^a-zA-Z\s]/g, '').toUpperCase();
+    }
+
+    setVisaInfo(prev => ({ ...prev, [field]: formattedValue }));
+  };
+
   const validateForm = () => {
     const newErrors = {};
 
@@ -86,16 +155,11 @@ const Payment = () => {
       newErrors.fullName = 'Họ và tên là bắt buộc';
     }
 
-    if (!paymentInfo.email.trim()) {
-      newErrors.email = 'Email là bắt buộc';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paymentInfo.email)) {
-      newErrors.email = 'Email không hợp lệ';
-    }
-
-    if (!paymentInfo.phone.trim()) {
-      newErrors.phone = 'Số điện thoại là bắt buộc';
-    } else if (!/^0\d{9}$/.test(paymentInfo.phone)) {
-      newErrors.phone = 'Số điện thoại phải là 10 chữ số, bắt đầu bằng 0';
+    // Validate Visa card if visa payment is selected
+    if (paymentInfo.paymentMethod === 'visa') {
+      if (!validateVisaCard()) {
+        newErrors.visa = 'Thông tin thẻ không hợp lệ. Vui lòng kiểm tra lại!';
+      }
     }
 
     setErrors(newErrors);
@@ -114,111 +178,114 @@ const Payment = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    // Kiểm tra số dư nếu chọn thanh toán bằng tài khoản Movie
-    if (paymentInfo.paymentMethod === 'movie') {
+
+    // Kiểm tra số dư nếu chọn thanh toán bằng ví
+    if (paymentInfo.paymentMethod === 'wallet') {
       if (accountBalance < bookingData.totalPrice) {
         setBalanceError('Số dư không đủ. Vui lòng nạp thêm hoặc chọn hình thức thanh toán khác.');
         return;
       }
     }
-    
+
     if (validateForm()) {
       // Mở popup xác nhận thay vì thanh toán trực tiếp
       setShowConfirmModal(true);
+    } else {
+      if (errors.visa) {
+        alert(errors.visa);
+      }
     }
   };
 
   const handleConfirmPayment = () => {
-      // Sinh mã vé
-      const ticketCode = generateTicketCode();
-      
-      // Lưu thông tin vé vào localStorage (tạm thời, sẽ lưu vào database sau)
-      const newBooking = {
+    // Sinh mã vé
+    const ticketCode = generateTicketCode();
+
+    // Lưu thông tin vé vào localStorage (tạm thời, sẽ lưu vào database sau)
+    const newBooking = {
+      id: Date.now(),
+      movie: bookingData.movieTitle,
+      theater: bookingData.theater,
+      date: bookingData.showDate || new Date().toISOString().split('T')[0],
+      time: bookingData.showTime || bookingData.time,
+      seats: bookingData.seats,
+      total: bookingData.totalPrice,
+      status: 'purchased', // Mặc định là 'purchased', có thể đổi thành 'cancelled' nếu huỷ
+      ticketCode: ticketCode
+    };
+
+    // Lấy danh sách vé hiện có
+    try {
+      const existingHistory = localStorage.getItem('bookingHistory');
+      let bookingHistory = [];
+      if (existingHistory) {
+        bookingHistory = JSON.parse(existingHistory);
+      }
+      bookingHistory.unshift(newBooking); // Thêm vào đầu danh sách
+      localStorage.setItem('bookingHistory', JSON.stringify(bookingHistory));
+    } catch (error) {
+      console.error('Error saving booking history:', error);
+    }
+
+    // Nếu thanh toán bằng ví, trừ tiền từ tài khoản
+    if (paymentInfo.paymentMethod === 'wallet') {
+      const newBalance = accountBalance - bookingData.totalPrice;
+      setAccountBalance(newBalance);
+      localStorage.setItem('accountBalance', newBalance.toString());
+    }
+
+    // Lưu vào lịch sử thanh toán
+    try {
+      const existingPaymentHistory = localStorage.getItem('paymentHistory');
+      let paymentHistory = [];
+      if (existingPaymentHistory) {
+        paymentHistory = JSON.parse(existingPaymentHistory);
+      }
+
+      const newPayment = {
         id: Date.now(),
-        movie: bookingData.movieTitle,
-        theater: bookingData.theater,
         date: new Date().toISOString().split('T')[0],
-        time: bookingData.time,
-        seats: bookingData.seats,
-        total: bookingData.totalPrice,
-        status: 'purchased', // Mặc định là 'purchased', có thể đổi thành 'cancelled' nếu huỷ
+        amount: bookingData.totalPrice,
+        method: getPaymentMethodName(paymentInfo.paymentMethod),
+        status: 'paid',
+        type: 'purchase',
         ticketCode: ticketCode
       };
 
-      // Lấy danh sách vé hiện có
-      try {
-        const existingHistory = localStorage.getItem('bookingHistory');
-        let bookingHistory = [];
-        if (existingHistory) {
-          bookingHistory = JSON.parse(existingHistory);
-        }
-        bookingHistory.unshift(newBooking); // Thêm vào đầu danh sách
-        localStorage.setItem('bookingHistory', JSON.stringify(bookingHistory));
-      } catch (error) {
-        console.error('Error saving booking history:', error);
-      }
-
-      // Nếu thanh toán bằng tài khoản Movie, trừ tiền từ tài khoản
-      if (paymentInfo.paymentMethod === 'movie') {
-        const newBalance = accountBalance - bookingData.totalPrice;
-        setAccountBalance(newBalance);
-        localStorage.setItem('accountBalance', newBalance.toString());
-      }
-
-      // Lưu vào lịch sử thanh toán
-      try {
-        const existingPaymentHistory = localStorage.getItem('paymentHistory');
-        let paymentHistory = [];
-        if (existingPaymentHistory) {
-          paymentHistory = JSON.parse(existingPaymentHistory);
-        }
-        
-        const newPayment = {
-          id: Date.now(),
-          date: new Date().toISOString().split('T')[0],
-          amount: bookingData.totalPrice,
-          method: getPaymentMethodName(paymentInfo.paymentMethod),
-          status: 'paid',
-          type: 'purchase',
-          ticketCode: ticketCode
-        };
-        
-        paymentHistory.unshift(newPayment);
-        localStorage.setItem('paymentHistory', JSON.stringify(paymentHistory));
-      } catch (error) {
-        console.error('Error saving payment history:', error);
-      }
+      paymentHistory.unshift(newPayment);
+      localStorage.setItem('paymentHistory', JSON.stringify(paymentHistory));
+    } catch (error) {
+      console.error('Error saving payment history:', error);
+    }
 
     // Xử lý thanh toán ở đây
     setShowConfirmModal(false);
-    
+
     // Xóa thông tin booking đã lưu sau khi thanh toán thành công
     const bookingKey = `booking_${bookingData.movieId}`;
     localStorage.removeItem(bookingKey);
-    
+
     // Lưu thông tin thành công để hiển thị trong popup
     setSuccessData({
       movieTitle: bookingData.movieTitle,
       theater: bookingData.theater,
-      time: bookingData.time,
+      showDate: bookingData.showDate,
+      showTime: bookingData.showTime,
       seats: bookingData.seats,
       totalPrice: bookingData.totalPrice,
       paymentMethod: getPaymentMethodName(paymentInfo.paymentMethod),
       ticketCode: ticketCode,
       email: paymentInfo.email
     });
-    
+
     // Hiển thị popup thành công
     setShowSuccessModal(true);
   };
 
   const getPaymentMethodName = (method) => {
     const methods = {
-      momo: 'Ví MoMo',
-      zalopay: 'Ví ZaloPay',
-      bank: 'Chuyển khoản ngân hàng',
-      movie: 'Tài khoản Movie'
+      visa: 'Thẻ Visa/Mastercard',
+      wallet: 'Ví của tôi'
     };
     return methods[method] || method;
   };
@@ -227,235 +294,271 @@ const Payment = () => {
     <>
       <Header />
       <div className="payment-container">
-      <div className="payment-header">
-        <h1>Thanh Toán</h1>
-      </div>
-
-      <div className="payment-content">
-        <div className="booking-summary-section">
-          <h2>Thông Tin Đặt Vé</h2>
-          <div className="summary-card">
-            <div className="summary-item">
-              <span className="label">Phim:</span>
-              <span className="value">{bookingData.movieTitle}</span>
-            </div>
-            <div className="summary-item">
-              <span className="label">Rạp:</span>
-              <span className="value">{bookingData.theater}</span>
-            </div>
-            <div className="summary-item">
-              <span className="label">Giờ chiếu:</span>
-              <span className="value">{bookingData.time}</span>
-            </div>
-            <div className="summary-item">
-              <span className="label">Ghế đã chọn:</span>
-              <span className="value">{bookingData.seats.join(', ')}</span>
-            </div>
-            <div className="summary-item">
-              <span className="label">Số lượng vé:</span>
-              <span className="value">{bookingData.seats.length} vé</span>
-            </div>
-            <div className="summary-item total">
-              <span className="label">Tổng tiền:</span>
-              <span className="value">{bookingData.totalPrice.toLocaleString('vi-VN')}đ</span>
-            </div>
-          </div>
+        <div className="payment-header">
+          <h1>Thanh Toán</h1>
         </div>
 
-        <div className="payment-form-section">
-          <h2>Thông Tin Thanh Toán</h2>
-          <form onSubmit={handleSubmit} className="payment-form">
-            <div className="form-group">
-              <label htmlFor="fullName">Họ và Tên <span className="required">*</span></label>
-              <input
-                type="text"
-                id="fullName"
-                name="fullName"
-                value={paymentInfo.fullName}
-                onChange={handleChange}
-                placeholder="Nhập họ và tên"
-                className={errors.fullName ? 'error' : ''}
-              />
-              {errors.fullName && <span className="error-message">{errors.fullName}</span>}
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="email">Email <span className="required">*</span></label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={paymentInfo.email}
-                onChange={handleChange}
-                placeholder="Nhập email"
-                className={errors.email ? 'error' : ''}
-              />
-              {errors.email && <span className="error-message">{errors.email}</span>}
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="phone">Số Điện Thoại <span className="required">*</span></label>
-              <input
-                type="tel"
-                id="phone"
-                name="phone"
-                value={paymentInfo.phone}
-                onChange={handleChange}
-                placeholder="Nhập số điện thoại"
-                className={errors.phone ? 'error' : ''}
-              />
-              {errors.phone && <span className="error-message">{errors.phone}</span>}
-            </div>
-
-            <div className="form-group">
-              <label>Phương Thức Thanh Toán <span className="required">*</span></label>
-              <div className="payment-methods">
-                <label className={`payment-method-option ${paymentInfo.paymentMethod === 'momo' ? 'selected' : ''}`}>
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="momo"
-                    checked={paymentInfo.paymentMethod === 'momo'}
-                    onChange={handleChange}
-                  />
-                  <span>Ví MoMo</span>
-                </label>
-                <label className={`payment-method-option ${paymentInfo.paymentMethod === 'zalopay' ? 'selected' : ''}`}>
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="zalopay"
-                    checked={paymentInfo.paymentMethod === 'zalopay'}
-                    onChange={handleChange}
-                  />
-                  <span>Ví ZaloPay</span>
-                </label>
-                <label className={`payment-method-option ${paymentInfo.paymentMethod === 'bank' ? 'selected' : ''}`}>
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="bank"
-                    checked={paymentInfo.paymentMethod === 'bank'}
-                    onChange={handleChange}
-                  />
-                  <span>Chuyển khoản ngân hàng</span>
-                </label>
-                <label className={`payment-method-option ${paymentInfo.paymentMethod === 'movie' ? 'selected' : ''}`}>
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="movie"
-                    checked={paymentInfo.paymentMethod === 'movie'}
-                    onChange={handleChange}
-                  />
-                  <span>Thanh toán bằng tài khoản Movie</span>
-                </label>
+        <div className="payment-content">
+          <div className="booking-summary-section">
+            <h2>Thông Tin Đặt Vé</h2>
+            <div className="summary-card">
+              <div className="summary-item">
+                <span className="label">Phim:</span>
+                <span className="value">{bookingData.movieTitle}</span>
               </div>
-              {paymentInfo.paymentMethod === 'movie' && (
-                <div className="movie-account-info">
-                  <p className="balance-text">Số dư tài khoản: <span className="balance-amount">{accountBalance.toLocaleString('vi-VN')}đ</span></p>
-                  {balanceError && (
-                    <div className="balance-error">
-                      <p>{balanceError}</p>
-                      <button 
-                        type="button"
-                        className="topup-redirect-btn"
-                        onClick={() => navigate('/account', { state: { tab: 'payment' } })}
-                      >
-                        Nạp tiền
-                      </button>
-                    </div>
-                  )}
+              <div className="summary-item">
+                <span className="label">Rạp:</span>
+                <span className="value">{bookingData.theater}</span>
+              </div>
+              <div className="summary-item">
+                <span className="label">Ngày chiếu:</span>
+                <span className="value">{bookingData.showDate}</span>
+              </div>
+              <div className="summary-item">
+                <span className="label">Giờ chiếu:</span>
+                <span className="value">{bookingData.showTime}</span>
+              </div>
+              <div className="summary-item">
+                <span className="label">Ghế đã chọn:</span>
+                <span className="value">{bookingData.seats.join(', ')}</span>
+              </div>
+              <div className="summary-item">
+                <span className="label">Số lượng vé:</span>
+                <span className="value">{bookingData.seats.length} vé</span>
+              </div>
+              <div className="summary-item total">
+                <span className="label">Tổng tiền:</span>
+                <span className="value">{bookingData.totalPrice.toLocaleString('vi-VN')}đ</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="payment-form-section">
+            <h2>Thông Tin Thanh Toán</h2>
+            <form onSubmit={handleSubmit} className="payment-form">
+              <div className="form-group">
+                <label htmlFor="fullName">Họ và Tên <span className="required">*</span></label>
+                <input
+                  type="text"
+                  id="fullName"
+                  name="fullName"
+                  value={paymentInfo.fullName}
+                  onChange={handleChange}
+                  placeholder="Nhập họ và tên"
+                  className={errors.fullName ? 'error' : ''}
+                />
+                {errors.fullName && <span className="error-message">{errors.fullName}</span>}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="email">Email <span className="required">*</span></label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={paymentInfo.email}
+                  disabled
+                  style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed', opacity: 0.7 }}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="phone">Số Điện Thoại <span className="required">*</span></label>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  value={paymentInfo.phone}
+                  disabled
+                  style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed', opacity: 0.7 }}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Phương Thức Thanh Toán <span className="required">*</span></label>
+                <div className="payment-methods">
+                  <label className={`payment-method-option ${paymentInfo.paymentMethod === 'visa' ? 'selected' : ''}`}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="visa"
+                      checked={paymentInfo.paymentMethod === 'visa'}
+                      onChange={handleChange}
+                    />
+                    <span>Thẻ Visa/Mastercard</span>
+                  </label>
+                  <label className={`payment-method-option ${paymentInfo.paymentMethod === 'wallet' ? 'selected' : ''}`}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="wallet"
+                      checked={paymentInfo.paymentMethod === 'wallet'}
+                      onChange={handleChange}
+                    />
+                    <span>Thanh toán bằng Ví của tôi</span>
+                  </label>
                 </div>
-              )}
-            </div>
 
-            <div className="form-actions">
-              <button type="button" className="cancel-btn" onClick={() => navigate(-1)}>
-                Quay lại
+                {/* Visa Card Form */}
+                {paymentInfo.paymentMethod === 'visa' && (
+                  <div className="visa-form" style={{ marginTop: '20px', padding: '20px', border: '1px solid #ddd', borderRadius: '8px', backgroundColor: '#f9f9f9' }}>
+                    <h4 style={{ marginBottom: '15px', color: '#333' }}>Thông tin thẻ Visa/Mastercard</h4>
+
+                    <div className="form-group">
+                      <label>Số thẻ <span className="required">*</span></label>
+                      <input
+                        type="text"
+                        value={visaInfo.cardNumber}
+                        onChange={(e) => handleVisaInputChange('cardNumber', e.target.value)}
+                        placeholder="1234 5678 9012 3456"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Tên chủ thẻ <span className="required">*</span></label>
+                      <input
+                        type="text"
+                        value={visaInfo.cardHolder}
+                        onChange={(e) => handleVisaInputChange('cardHolder', e.target.value)}
+                        placeholder="NGUYEN VAN A"
+                      />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                      <div className="form-group">
+                        <label>Ngày hết hạn <span className="required">*</span></label>
+                        <input
+                          type="text"
+                          value={visaInfo.expiryDate}
+                          onChange={(e) => handleVisaInputChange('expiryDate', e.target.value)}
+                          placeholder="MM/YY"
+                          maxLength="5"
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>CVV <span className="required">*</span></label>
+                        <input
+                          type="text"
+                          value={visaInfo.cvv}
+                          onChange={(e) => handleVisaInputChange('cvv', e.target.value)}
+                          placeholder="123"
+                          maxLength="4"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Wallet Balance Display */}
+                {paymentInfo.paymentMethod === 'wallet' && (
+                  <div className="movie-account-info" style={{ marginTop: '15px', padding: '15px', backgroundColor: '#f0f8ff', borderRadius: '8px' }}>
+                    <p className="balance-text">Số dư tài khoản: <span className="balance-amount" style={{ fontWeight: 'bold', color: '#007bff', fontSize: '1.1em' }}>{accountBalance.toLocaleString('vi-VN')}đ</span></p>
+                    {balanceError && (
+                      <div className="balance-error" style={{ marginTop: '10px', padding: '10px', backgroundColor: '#fff3cd', borderRadius: '5px', border: '1px solid #ffc107' }}>
+                        <p style={{ color: '#856404', marginBottom: '10px' }}>{balanceError}</p>
+                        <button
+                          type="button"
+                          className="topup-redirect-btn"
+                          onClick={() => navigate('/account', { state: { activeTab: 'wallet' } })}
+                          style={{ padding: '8px 16px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
+                        >
+                          Nạp tiền
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="form-actions">
+                <button type="button" className="cancel-btn" onClick={() => navigate(-1)}>
+                  Quay lại
+                </button>
+                <button type="submit" className="submit-btn">
+                  Xác Nhận Thanh Toán
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      {/* Modal xác nhận thanh toán */}
+      {showConfirmModal && (
+        <div className="modal-overlay" onClick={() => setShowConfirmModal(false)}>
+          <div className="modal-content payment-confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Xác Nhận Thanh Toán</h3>
+            <div className="payment-confirm-info">
+              <p>Bạn có chắc chắn muốn thanh toán với thông tin sau:</p>
+              <div className="confirm-booking-details">
+                <p><strong>Phim:</strong> {bookingData.movieTitle}</p>
+                <p><strong>Rạp:</strong> {bookingData.theater}</p>
+                <p><strong>Ngày chiếu:</strong> {bookingData.showDate}</p>
+                <p><strong>Giờ chiếu:</strong> {bookingData.showTime}</p>
+                <p><strong>Ghế:</strong> {bookingData.seats.join(', ')}</p>
+                <p><strong>Phương thức thanh toán:</strong> {getPaymentMethodName(paymentInfo.paymentMethod)}</p>
+                {paymentInfo.paymentMethod === 'wallet' && (
+                  <p><strong>Số dư sau thanh toán:</strong> {(accountBalance - bookingData.totalPrice).toLocaleString('vi-VN')}đ</p>
+                )}
+                <p className="confirm-total"><strong>Tổng tiền:</strong> {bookingData.totalPrice.toLocaleString('vi-VN')}đ</p>
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button className="cancel-btn" onClick={() => setShowConfirmModal(false)}>
+                No
               </button>
-              <button type="submit" className="submit-btn">
-                Xác Nhận Thanh Toán
+              <button className="confirm-btn" onClick={handleConfirmPayment}>
+                Yes
               </button>
             </div>
-          </form>
+          </div>
         </div>
-      </div>
-    </div>
+      )}
 
-    {/* Modal xác nhận thanh toán */}
-    {showConfirmModal && (
-      <div className="modal-overlay" onClick={() => setShowConfirmModal(false)}>
-        <div className="modal-content payment-confirm-modal" onClick={(e) => e.stopPropagation()}>
-          <h3>Xác Nhận Thanh Toán</h3>
-          <div className="payment-confirm-info">
-            <p>Bạn có chắc chắn muốn thanh toán với thông tin sau:</p>
-            <div className="confirm-booking-details">
-              <p><strong>Phim:</strong> {bookingData.movieTitle}</p>
-              <p><strong>Rạp:</strong> {bookingData.theater}</p>
-              <p><strong>Giờ chiếu:</strong> {bookingData.time}</p>
-              <p><strong>Ghế:</strong> {bookingData.seats.join(', ')}</p>
-              <p><strong>Phương thức thanh toán:</strong> {getPaymentMethodName(paymentInfo.paymentMethod)}</p>
-              {paymentInfo.paymentMethod === 'movie' && (
-                <p><strong>Số dư sau thanh toán:</strong> {(accountBalance - bookingData.totalPrice).toLocaleString('vi-VN')}đ</p>
-              )}
-              <p className="confirm-total"><strong>Tổng tiền:</strong> {bookingData.totalPrice.toLocaleString('vi-VN')}đ</p>
+      {/* Modal thanh toán thành công */}
+      {showSuccessModal && successData && (
+        <div className="modal-overlay" onClick={() => {
+          setShowSuccessModal(false);
+          navigate('/');
+        }}>
+          <div className="modal-content payment-success-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ color: '#28a745', marginBottom: '20px' }}>✓ Thanh Toán Thành Công!</h3>
+            <div className="payment-success-info">
+              <div className="success-booking-details">
+                <p><strong>Phim:</strong> {successData.movieTitle}</p>
+                <p><strong>Rạp:</strong> {successData.theater}</p>
+                <p><strong>Ngày chiếu:</strong> {successData.showDate}</p>
+                <p><strong>Giờ chiếu:</strong> {successData.showTime}</p>
+                <p><strong>Ghế:</strong> {successData.seats.join(', ')}</p>
+                <p><strong>Phương thức thanh toán:</strong> {successData.paymentMethod}</p>
+                <p><strong>Tổng tiền:</strong> {successData.totalPrice.toLocaleString('vi-VN')}đ</p>
+                <p style={{ marginTop: '15px', paddingTop: '15px', borderTop: '2px solid #28a745' }}>
+                  <strong style={{ color: '#28a745' }}>Mã vé:</strong>
+                  <span style={{ color: '#28a745', fontWeight: 'bold', fontSize: '16px', marginLeft: '10px' }}>
+                    {successData.ticketCode}
+                  </span>
+                </p>
+                <p style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
+                  Mã vé đã được gửi đến email: {successData.email}
+                </p>
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button
+                className="confirm-btn"
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  navigate('/');
+                }}
+                style={{ width: '100%' }}
+              >
+                Về Trang Chủ
+              </button>
             </div>
           </div>
-          <div className="modal-actions">
-            <button className="cancel-btn" onClick={() => setShowConfirmModal(false)}>
-              No
-            </button>
-            <button className="confirm-btn" onClick={handleConfirmPayment}>
-              Yes
-            </button>
-          </div>
         </div>
-      </div>
-    )}
-
-    {/* Modal thanh toán thành công */}
-    {showSuccessModal && successData && (
-      <div className="modal-overlay" onClick={() => {
-        setShowSuccessModal(false);
-        navigate('/');
-      }}>
-        <div className="modal-content payment-success-modal" onClick={(e) => e.stopPropagation()}>
-          <h3 style={{ color: '#28a745', marginBottom: '20px' }}>✓ Thanh Toán Thành Công!</h3>
-          <div className="payment-success-info">
-            <div className="success-booking-details">
-              <p><strong>Phim:</strong> {successData.movieTitle}</p>
-              <p><strong>Rạp:</strong> {successData.theater}</p>
-              <p><strong>Giờ chiếu:</strong> {successData.time}</p>
-              <p><strong>Ghế:</strong> {successData.seats.join(', ')}</p>
-              <p><strong>Phương thức thanh toán:</strong> {successData.paymentMethod}</p>
-              <p><strong>Tổng tiền:</strong> {successData.totalPrice.toLocaleString('vi-VN')}đ</p>
-              <p style={{ marginTop: '15px', paddingTop: '15px', borderTop: '2px solid #28a745' }}>
-                <strong style={{ color: '#28a745' }}>Mã vé:</strong> 
-                <span style={{ color: '#28a745', fontWeight: 'bold', fontSize: '16px', marginLeft: '10px' }}>
-                  {successData.ticketCode}
-                </span>
-              </p>
-              <p style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
-                Mã vé đã được gửi đến email: {successData.email}
-              </p>
-            </div>
-          </div>
-          <div className="modal-actions">
-            <button 
-              className="confirm-btn" 
-              onClick={() => {
-                setShowSuccessModal(false);
-                navigate('/');
-              }}
-              style={{ width: '100%' }}
-            >
-              Về Trang Chủ
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
+      )}
     </>
   );
 };

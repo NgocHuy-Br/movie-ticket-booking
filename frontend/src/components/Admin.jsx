@@ -1138,7 +1138,7 @@ const Admin = () => {
             roomId: '',
             showDate: '',
             showTime: '',
-            price: 50000
+            price: '50,000'
         });
         setCinemaRooms([]);
         setIsEditModeShowtime(false);
@@ -1153,7 +1153,7 @@ const Admin = () => {
             roomId: showtime.roomId || '',
             showDate: showtime.showDate,
             showTime: showtime.showTime,
-            price: showtime.price
+            price: showtime.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
         });
         setIsEditModeShowtime(true);
         setShowShowtimeModal(true);
@@ -1172,7 +1172,7 @@ const Admin = () => {
             roomId: '',
             showDate: '',
             showTime: '',
-            price: 50000
+            price: '50,000'
         });
         setCinemaRooms([]);
         setIsEditModeShowtime(false);
@@ -1180,6 +1180,17 @@ const Admin = () => {
 
     const handleShowtimeFormChange = async (e) => {
         const { name, value } = e.target;
+
+        // Format price with thousand separators
+        if (name === 'price') {
+            const formatted = value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            setShowtimeForm({
+                ...showtimeForm,
+                [name]: formatted
+            });
+            return;
+        }
+
         setShowtimeForm({
             ...showtimeForm,
             [name]: value
@@ -1224,7 +1235,8 @@ const Admin = () => {
             alert('Vui lòng chọn giờ chiếu!');
             return;
         }
-        if (!showtimeForm.price || showtimeForm.price < 10000) {
+        const priceValue = parseFloat(showtimeForm.price.replace(/,/g, ''));
+        if (!priceValue || priceValue < 10000) {
             alert('Giá vé phải từ 10,000 VNĐ trở lên!');
             return;
         }
@@ -1248,7 +1260,7 @@ const Admin = () => {
                     roomId: parseInt(showtimeForm.roomId),
                     showDate: showtimeForm.showDate,
                     showTime: showtimeForm.showTime,
-                    price: parseFloat(showtimeForm.price)
+                    price: parseFloat(showtimeForm.price.replace(/,/g, ''))
                 })
             });
 
@@ -3233,17 +3245,14 @@ const Admin = () => {
                             <div className="form-group">
                                 <label>Giá vé (VNĐ) <span className="required">*</span></label>
                                 <input
-                                    type="number"
+                                    type="text"
                                     name="price"
                                     value={showtimeForm.price}
                                     onChange={handleShowtimeFormChange}
-                                    min={10000}
-                                    step={5000}
-                                    placeholder="50000"
                                     required
                                 />
                                 <span className="hint" style={{ fontSize: '0.9em', color: '#666', marginTop: '4px', display: 'block' }}>
-                                    {showtimeForm.price ? `${parseInt(showtimeForm.price).toLocaleString('vi-VN')}₫` : ''}
+                                    Số tiền tối thiểu: 10,000 VNĐ
                                 </span>
                             </div>
 

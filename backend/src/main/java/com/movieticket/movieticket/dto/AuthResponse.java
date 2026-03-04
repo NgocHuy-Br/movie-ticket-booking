@@ -32,5 +32,6 @@ public class AuthResponse {
         private String avatar;
         private String role;
         private String membershipLevel;
+        private java.math.BigDecimal accountBalance;
     }
 }
