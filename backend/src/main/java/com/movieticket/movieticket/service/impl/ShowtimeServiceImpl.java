@@ -15,6 +15,7 @@ import com.movieticket.movieticket.repository.ShowtimeRepository;
 import com.movieticket.movieticket.repository.SystemSettingsRepository;
 import com.movieticket.movieticket.repository.TheaterRepository;
 import com.movieticket.movieticket.service.ShowtimeService;
+import com.movieticket.movieticket.service.MovieService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +37,7 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     private final SeatRepository seatRepository;
     private final BookingRepository bookingRepository;
     private final SystemSettingsRepository systemSettingsRepository;
+    private final MovieService movieService;
 
     @Override
     public List<ShowtimeDto> getAllShowtimes() {
@@ -110,6 +112,9 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         // Tự động tạo ghế cho suất chiếu
         initializeSeatsForShowtime(savedShowtime.getId());
 
+        // Update movie status after creating showtime
+        movieService.updateMovieStatus(movie.getId());
+
         return convertToDto(savedShowtime);
     }
 
@@ -152,15 +157,21 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         );
 
         Showtime updatedShowtime = showtimeRepository.save(showtime);
+
+        // Update movie status after updating showtime
+        movieService.updateMovieStatus(showtime.getMovie().getId());
+
         return convertToDto(updatedShowtime);
     }
 
     @Override
     @Transactional
     public void deleteShowtime(Long id) {
-        if (!showtimeRepository.existsById(id)) {
-            throw new RuntimeException("Showtime not found with id: " + id);
-        }
+        Showtime showtime = showtimeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Showtime not found with id: " + id));
+
+        Long movieId = showtime.getMovie().getId();
+
         // Check if showtime has any bookings
         if (!bookingRepository.findByShowtimeId(id).isEmpty()) {
             throw new RuntimeException("Cannot delete showtime that has bookings. Bookings must be cancelled first.");
@@ -168,6 +179,9 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         // Xóa tất cả ghế của suất chiếu trước
         seatRepository.deleteAll(seatRepository.findByShowtimeId(id));
         showtimeRepository.deleteById(id);
+
+        // Update movie status after deleting showtime
+        movieService.updateMovieStatus(movieId);
     }
 
     @Override

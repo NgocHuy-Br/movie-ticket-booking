@@ -72,6 +72,30 @@ public class AdminController {
         }
     }
 
+    @PostMapping("/movies/update-statuses")
+    public ResponseEntity<ApiResponse<String>> updateAllMovieStatuses() {
+        try {
+            movieService.updateAllMovieStatuses();
+            return ResponseEntity.ok(ApiResponse.success("All movie statuses updated successfully",
+                    "Đã cập nhật trạng thái tất cả phim"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/movies/{id}/update-status")
+    public ResponseEntity<ApiResponse<String>> updateMovieStatus(@PathVariable Long id) {
+        try {
+            movieService.updateMovieStatus(id);
+            return ResponseEntity.ok(ApiResponse.success("Movie status updated successfully",
+                    "Đã cập nhật trạng thái phim"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
     // ==================== GENRES MANAGEMENT ====================
 
     @GetMapping("/genres")

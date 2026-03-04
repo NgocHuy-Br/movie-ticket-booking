@@ -18,4 +18,8 @@ public interface MovieService {
     MovieDto updateMovie(Long id, MovieDto movieDto);
 
     void deleteMovie(Long id);
+
+    void updateAllMovieStatuses();
+
+    void updateMovieStatus(Long movieId);
 }

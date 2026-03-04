@@ -820,7 +820,7 @@ const Admin = () => {
             releaseDate: '',
             ageRating: 'P',
             duration: 90,
-            status: 'NOW_SHOWING'
+            status: 'COMING_SOON'
         });
         setIsEditModeMovie(false);
     };
@@ -877,22 +877,29 @@ const Admin = () => {
 
             const method = isEditModeMovie ? 'PUT' : 'POST';
 
+            // For new movies, don't send status (BE will default to COMING_SOON)
+            const payload = {
+                title: movieForm.title,
+                description: movieForm.description,
+                duration: parseInt(movieForm.duration),
+                genre: movieForm.genre,
+                ageRating: movieForm.ageRating,
+                imageUrl: movieForm.imageUrl,
+                releaseDate: movieForm.releaseDate || null
+            };
+
+            // Only include status for edit mode
+            if (isEditModeMovie) {
+                payload.status = movieForm.status;
+            }
+
             const response = await fetch(url, {
                 method: method,
                 headers: {
                     ...getAuthHeaders(),
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    title: movieForm.title,
-                    description: movieForm.description,
-                    duration: parseInt(movieForm.duration),
-                    genre: movieForm.genre,
-                    ageRating: movieForm.ageRating,
-                    imageUrl: movieForm.imageUrl,
-                    releaseDate: movieForm.releaseDate || null,
-                    status: movieForm.status
-                })
+                body: JSON.stringify(payload)
             });
 
             const data = await response.json();
@@ -1666,7 +1673,7 @@ const Admin = () => {
                                                     <td>
                                                         <span className={`badge status-${movie.status}`}>
                                                             {movie.status === 'NOW_SHOWING' ? 'Đang chiếu' :
-                                                                movie.status === 'COMING_SOON' ? 'Sắp chiếu' : 'Đã kết thúc'}
+                                                                movie.status === 'COMING_SOON' ? 'Sắp chiếu' : 'Đã rời rạp'}
                                                         </span>
                                                     </td>
                                                     <td>
@@ -2918,16 +2925,55 @@ const Admin = () => {
                             </div>
 
                             <div className="form-group">
-                                <label>Trạng thái <span className="required">*</span></label>
-                                <select
-                                    name="status"
-                                    value={movieForm.status}
-                                    onChange={handleMovieFormChange}
-                                >
-                                    <option value="NOW_SHOWING">Đang chiếu</option>
-                                    <option value="COMING_SOON">Sắp chiếu</option>
-                                    <option value="ENDED">Đã kết thúc</option>
-                                </select>
+                                <label>Trạng thái {!isEditModeMovie && <span style={{ fontSize: '0.85em', color: '#666' }}>(Tự động: Sắp chiếu)</span>}</label>
+                                {isEditModeMovie ? (
+                                    <>
+                                        {movieForm.status === 'ENDED' ? (
+                                            <div>
+                                                <input
+                                                    type="text"
+                                                    value="Đã rời rạp"
+                                                    disabled
+                                                    style={{
+                                                        backgroundColor: '#f8f9fa',
+                                                        cursor: 'not-allowed',
+                                                        color: '#6c757d'
+                                                    }}
+                                                />
+                                                <small style={{ display: 'block', marginTop: '4px', color: '#6c757d' }}>
+                                                    ⚠️ Không thể thay đổi trạng thái phim đã rời rạp
+                                                </small>
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                <select
+                                                    name="status"
+                                                    value={movieForm.status}
+                                                    onChange={handleMovieFormChange}
+                                                >
+                                                    <option value={movieForm.status}>
+                                                        {movieForm.status === 'NOW_SHOWING' ? 'Đang chiếu' : 'Sắp chiếu'} (Hiện tại)
+                                                    </option>
+                                                    <option value="ENDED">Đánh dấu đã rời rạp</option>
+                                                </select>
+                                                <small style={{ display: 'block', marginTop: '4px', color: '#6c757d' }}>
+                                                    ℹ️ 'Sắp chiếu' và 'Đang chiếu' tự động cập nhật theo suất chiếu. Bạn chỉ có thể đánh dấu 'Đã rời rạp'.
+                                                </small>
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <input
+                                        type="text"
+                                        value="Sắp chiếu (Được cập nhật tự động)"
+                                        disabled
+                                        style={{
+                                            backgroundColor: '#f8f9fa',
+                                            cursor: 'not-allowed',
+                                            color: '#6c757d'
+                                        }}
+                                    />
+                                )}
                             </div>
                         </div>
 
