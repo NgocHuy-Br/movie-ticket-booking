@@ -2,7 +2,7 @@ package com.movieticket.movieticket.config;
 
 import com.movieticket.movieticket.entity.User;
 import com.movieticket.movieticket.repository.UserRepository;
-import com.movieticket.movieticket.service.SystemSettingsService;
+import com.movieticket.movieticket.service.SystemSettingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -19,7 +19,7 @@ public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final SystemSettingsService systemSettingsService;
+    private final SystemSettingService systemSettingService;
 
     @Override
     public void run(String... args) {
@@ -58,7 +58,7 @@ public class DataInitializer implements CommandLineRunner {
 
         // Khởi tạo system settings mặc định
         log.info("Dang kiem tra va khoi tao system settings...");
-        systemSettingsService.initializeDefaultSettings();
+        systemSettingService.initializeDefaultSettings();
         log.info("System settings da duoc khoi tao thanh cong.");
     }
 }

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import './MyMovies.css';
 
 const MyMovies = () => {
@@ -101,6 +103,83 @@ const MyMovies = () => {
         }
     };
 
+    const handlePrintTicket = async (booking) => {
+        try {
+            // Create a temporary div with Vietnamese content
+            const ticketDiv = document.createElement('div');
+            ticketDiv.style.cssText = 'position: absolute; left: -9999px; top: 0; width: 800px; padding: 40px; background: white; font-family: Arial, sans-serif;';
+
+            ticketDiv.innerHTML = `
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h1 style="font-size: 32px; font-weight: bold; margin: 0 0 10px 0;">VÉ XEM PHIM</h1>
+                    <p style="font-size: 20px; margin: 5px 0;">Mã vé: ${booking.ticketCode}</p>
+                    <hr style="border: 2px solid #333; margin: 20px 0;">
+                </div>
+                
+                <div style="margin-bottom: 25px;">
+                    <h2 style="font-size: 24px; font-weight: bold; margin-bottom: 15px;">Phim: ${booking.movieTitle}</h2>
+                    <p style="font-size: 18px; margin: 8px 0;"><strong>Rạp:</strong> ${booking.theaterName}</p>
+                    <p style="font-size: 18px; margin: 8px 0;"><strong>Ngày chiếu:</strong> ${formatDate(booking.showDate)}</p>
+                    <p style="font-size: 18px; margin: 8px 0;"><strong>Giờ chiếu:</strong> ${formatTime(booking.showTime)}</p>
+                    <p style="font-size: 18px; margin: 8px 0;"><strong>Ghế:</strong> ${booking.seats.join(', ')}</p>
+                    <p style="font-size: 20px; margin: 8px 0; color: #e50914;"><strong>Tổng tiền: ${formatCurrency(booking.totalPrice)}</strong></p>
+                </div>
+                
+                <hr style="border: 1px solid #ccc; margin: 25px 0;">
+                
+                <div style="margin-bottom: 25px;">
+                    <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 12px;">THÔNG TIN KHÁCH HÀNG</h3>
+                    <p style="font-size: 16px; margin: 6px 0;"><strong>Họ tên:</strong> ${booking.userName}</p>
+                    ${booking.userEmail ? `<p style="font-size: 16px; margin: 6px 0;"><strong>Email:</strong> ${booking.userEmail}</p>` : ''}
+                    ${booking.userPhone ? `<p style="font-size: 16px; margin: 6px 0;"><strong>Số điện thoại:</strong> ${booking.userPhone}</p>` : ''}
+                    ${booking.userBirthDate ? `<p style="font-size: 16px; margin: 6px 0;"><strong>Ngày sinh:</strong> ${formatDate(booking.userBirthDate)}</p>` : ''}
+                    ${booking.userCmnd ? `<p style="font-size: 16px; margin: 6px 0;"><strong>CMND/CCCD:</strong> ${booking.userCmnd}</p>` : ''}
+                </div>
+                
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ccc;">
+                    <p style="font-size: 14px; color: #666; margin: 5px 0;">Ngày đặt: ${formatDate(booking.bookingDate)}</p>
+                </div>
+                
+                <div style="text-align: center; margin-top: 40px;">
+                    <p style="font-size: 16px; margin: 8px 0;">Vui lòng mang vé này đến rạp</p>
+                    <p style="font-size: 16px; margin: 8px 0;">Cảm ơn quý khách đã sử dụng dịch vụ</p>
+                    <p style="font-size: 12px; margin: 15px 0; color: #666;">Ticket Code: ${booking.ticketCode}</p>
+                </div>
+            `;
+
+            document.body.appendChild(ticketDiv);
+
+            // Convert HTML to canvas with better quality
+            const canvas = await html2canvas(ticketDiv, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff'
+            });
+
+            document.body.removeChild(ticketDiv);
+
+            // Convert canvas to PDF
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            const imgWidth = 210; // A4 width in mm
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+            pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+
+            const fileName = `Ve-${booking.movieTitle.replace(/[^a-zA-Z0-9]/g, '')}-${booking.ticketCode}.pdf`;
+            pdf.save(fileName);
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            alert('Lỗi khi tạo PDF');
+        }
+    };
+
     if (loading) {
         return <div className="loading">Đang tải...</div>;
     }
@@ -175,14 +254,23 @@ const MyMovies = () => {
                                 </div>
                             </div>
 
-                            {booking.canCancel && (
+                            <div className="booking-actions">
                                 <button
-                                    className="cancel-booking-btn"
-                                    onClick={() => handleCancelBooking(booking.id)}
+                                    className={`print-ticket-btn ${booking.status === 'CANCELLED' ? 'disabled' : ''}`}
+                                    onClick={() => handlePrintTicket(booking)}
+                                    disabled={booking.status === 'CANCELLED'}
                                 >
-                                    Hủy vé
+                                    In vé
                                 </button>
-                            )}
+                                {booking.canCancel && (
+                                    <button
+                                        className="cancel-booking-btn"
+                                        onClick={() => handleCancelBooking(booking.id)}
+                                    >
+                                        Hủy vé
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     ))}
                 </div>

@@ -15,11 +15,11 @@ const Admin = () => {
     const [bookings, setBookings] = useState([]);
     const [statistics, setStatistics] = useState(null);
     const [settings, setSettings] = useState({
-        TOTAL_ROWS: '10',
-        SEATS_PER_ROW: '8',
         MAX_TICKETS_PER_BOOKING: '10',
         SEAT_HOLD_MINUTES: '10',
-        MIN_GAP_BETWEEN_SHOWS: '30'
+        MIN_GAP_BETWEEN_SHOWS: '30',
+        MIN_HOURS_BEFORE_CANCEL: '48',
+        REFUND_PERCENTAGE: '80'
     });
     const [loading, setLoading] = useState(true);
 
@@ -2520,45 +2520,6 @@ const Admin = () => {
 
                             <div className="settings-container">
                                 <div className="settings-section">
-                                    <h3>📺 Cấu hình Phòng Chiếu</h3>
-                                    <p className="settings-note">
-                                        Áp dụng cho TẤT CẢ phòng chiếu của TẤT CẢ rạp trong hệ thống
-                                    </p>
-
-                                    <div className="setting-item">
-                                        <label>Số hàng ghế:</label>
-                                        <input
-                                            type="number"
-                                            value={settings.TOTAL_ROWS}
-                                            onChange={(e) => handleSettingChange('TOTAL_ROWS', e.target.value)}
-                                            min={5}
-                                            max={20}
-                                        />
-                                        <span className="hint">
-                                            Ví dụ: {settings.TOTAL_ROWS} → Hàng A đến {String.fromCharCode(64 + parseInt(settings.TOTAL_ROWS))}
-                                        </span>
-                                    </div>
-
-                                    <div className="setting-item">
-                                        <label>Số ghế mỗi hàng:</label>
-                                        <input
-                                            type="number"
-                                            value={settings.SEATS_PER_ROW}
-                                            onChange={(e) => handleSettingChange('SEATS_PER_ROW', e.target.value)}
-                                            min={6}
-                                            max={15}
-                                        />
-                                        <span className="hint">
-                                            Ví dụ: {settings.SEATS_PER_ROW} → Ghế 1 đến {settings.SEATS_PER_ROW}
-                                        </span>
-                                    </div>
-
-                                    <div className="calculated-result">
-                                        <strong>→ Tổng số ghế mỗi phòng: {parseInt(settings.TOTAL_ROWS) * parseInt(settings.SEATS_PER_ROW)} ghế</strong>
-                                    </div>
-                                </div>
-
-                                <div className="settings-section">
                                     <h3>🎫 Giới hạn Đặt vé</h3>
 
                                     <div className="setting-item">
@@ -2599,6 +2560,43 @@ const Admin = () => {
                                             max={60}
                                         />
                                         <span className="hint">phút (Thời gian dọn dẹp phòng)</span>
+                                    </div>
+                                </div>
+
+                                <div className="settings-section">
+                                    <h3>❌ Chính sách Hủy vé & Hoàn tiền</h3>
+                                    <p className="settings-note">
+                                        Quy định về thời gian và tỷ lệ hoàn tiền khi khách hàng hủy vé
+                                    </p>
+
+                                    <div className="setting-item">
+                                        <label>Thời gian hủy vé tối thiểu:</label>
+                                        <input
+                                            type="number"
+                                            value={settings.MIN_HOURS_BEFORE_CANCEL}
+                                            onChange={(e) => handleSettingChange('MIN_HOURS_BEFORE_CANCEL', e.target.value)}
+                                            min={1}
+                                            max={168}
+                                        />
+                                        <span className="hint">giờ trước suất chiếu (Ví dụ: 48 = 2 ngày trước)</span>
+                                    </div>
+
+                                    <div className="setting-item">
+                                        <label>Tỷ lệ hoàn tiền:</label>
+                                        <input
+                                            type="number"
+                                            value={settings.REFUND_PERCENTAGE}
+                                            onChange={(e) => handleSettingChange('REFUND_PERCENTAGE', e.target.value)}
+                                            min={0}
+                                            max={100}
+                                        />
+                                        <span className="hint">% (Ví dụ: 80 = hoàn 80% giá trị vé)</span>
+                                    </div>
+
+                                    <div className="calculated-result">
+                                        <strong>
+                                            → Khách hàng phải hủy vé trước {settings.MIN_HOURS_BEFORE_CANCEL} giờ và được hoàn {settings.REFUND_PERCENTAGE}% tiền
+                                        </strong>
                                     </div>
                                 </div>
 

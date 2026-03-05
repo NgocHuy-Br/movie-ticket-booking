@@ -73,6 +73,8 @@ public class SystemSettingsServiceImpl implements SystemSettingsService {
         defaultSettings.put("SEAT_HOLD_MINUTES", "10");
         defaultSettings.put("MIN_GAP_BETWEEN_SHOWS", "30");
         defaultSettings.put("AUTO_MARK_ENDED_AFTER_DAYS", "7");
+        defaultSettings.put("MIN_HOURS_BEFORE_CANCEL", "48");
+        defaultSettings.put("REFUND_PERCENTAGE", "80");
 
         Map<String, String> descriptions = new HashMap<>();
         descriptions.put("MAX_TICKETS_PER_BOOKING", "Số vé tối đa mỗi lần đặt");
@@ -80,6 +82,10 @@ public class SystemSettingsServiceImpl implements SystemSettingsService {
         descriptions.put("MIN_GAP_BETWEEN_SHOWS", "Khoảng cách tối thiểu giữa các suất chiếu (phút)");
         descriptions.put("AUTO_MARK_ENDED_AFTER_DAYS",
                 "Số ngày sau suất chiếu cuối để tự động đánh dấu phim đã rời rạp");
+        descriptions.put("MIN_HOURS_BEFORE_CANCEL",
+                "Số giờ tối thiểu trước suất chiếu để được phép hủy vé (mặc định 48 giờ = 2 ngày)");
+        descriptions.put("REFUND_PERCENTAGE",
+                "Tỷ lệ phần trăm hoàn tiền khi hủy vé (mặc định 80%)");
 
         for (Map.Entry<String, String> entry : defaultSettings.entrySet()) {
             if (!settingsRepository.existsBySettingKey(entry.getKey())) {

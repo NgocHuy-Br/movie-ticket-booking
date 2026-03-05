@@ -20,6 +20,10 @@ public class BookingDto {
     private String ticketCode;
     private Long userId;
     private String userName;
+    private String userEmail;
+    private String userPhone;
+    private LocalDate userBirthDate;
+    private String userCmnd;
     private Long movieId;
     private String movieTitle;
     private Long theaterId;

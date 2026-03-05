@@ -265,18 +265,26 @@ const Booking = () => {
                   {getFilteredShowtimes().map((showtime) => {
                     const displayTime = `${showtime.showTime.substring(0, 5)}`;
                     const displayDate = new Date(showtime.showDate).toLocaleDateString('vi-VN');
+
+                    // Check if showtime has passed
+                    const showtimeDateTime = new Date(`${showtime.showDate}T${showtime.showTime}`);
+                    const now = new Date();
+                    const isPassed = showtimeDateTime < now;
+
                     return (
                       <button
                         key={showtime.id}
-                        className={`time-slot ${selectedShowtime === showtime.id ? 'active' : ''}`}
+                        className={`time-slot ${selectedShowtime === showtime.id ? 'active' : ''} ${isPassed ? 'disabled' : ''}`}
                         onClick={() => {
+                          if (isPassed) return; // Don't allow selection of passed showtimes
                           console.log('[DEBUG CLICK] Time slot clicked, showtime:', showtime);
                           console.log('[DEBUG CLICK] Setting selectedShowtime to:', showtime.id);
                           setSelectedShowtime(showtime.id);
                           setSelectedSeats([]);
                           setLocalSelectedSeats({});
                         }}
-                        title={`${displayDate} - ${displayTime}`}
+                        disabled={isPassed}
+                        title={isPassed ? 'Suất chiếu đã qua' : `${displayDate} - ${displayTime}`}
                       >
                         <div className="time-slot-time">{displayTime}</div>
                         <div className="time-slot-date">{displayDate}</div>
@@ -319,7 +327,7 @@ const Booking = () => {
                       <span>Đang chọn</span>
                     </div>
                     <div className="legend-item">
-                      <div className="seat-sample occupied"></div>
+                      <div className="seat-sample occupied">✕</div>
                       <span>Đã đặt</span>
                     </div>
                   </div>

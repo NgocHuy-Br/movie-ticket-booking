@@ -7,12 +7,14 @@ import com.movieticket.movieticket.dto.BookingRequest;
 import com.movieticket.movieticket.entity.*;
 import com.movieticket.movieticket.repository.*;
 import com.movieticket.movieticket.service.BookingService;
+import com.movieticket.movieticket.service.SystemSettingsService;
 import com.movieticket.movieticket.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -30,6 +32,7 @@ public class BookingServiceImpl implements BookingService {
     private final SeatRepository seatRepository;
     private final PaymentHistoryRepository paymentHistoryRepository;
     private final WalletService walletService;
+    private final SystemSettingsService systemSettingsService;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -228,10 +231,16 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Booking already cancelled");
         }
 
-        // Kiểm tra thời gian hủy (trong vòng 60 phút)
-        LocalDateTime cancellationDeadline = booking.getCreatedAt().plusMinutes(60);
+        // Lấy thời gian tối thiểu trước suất chiếu từ system settings (mặc định 48 giờ)
+        Integer minHoursBeforeShowtime = systemSettingsService.getIntValue("MIN_HOURS_BEFORE_CANCEL");
+
+        // Kiểm tra thời gian hủy dựa vào suất chiếu
+        LocalDateTime showtimeDateTime = LocalDateTime.of(booking.getShowDate(), booking.getShowTime());
+        LocalDateTime cancellationDeadline = showtimeDateTime.minusHours(minHoursBeforeShowtime);
+
         if (LocalDateTime.now().isAfter(cancellationDeadline)) {
-            throw new RuntimeException("Cannot cancel booking after 60 minutes from booking time");
+            throw new RuntimeException(String.format(
+                    "Không thể hủy vé trong vòng %d giờ trước suất chiếu", minHoursBeforeShowtime));
         }
 
         // Hủy booking
@@ -260,30 +269,43 @@ public class BookingServiceImpl implements BookingService {
         showtime.setAvailableSeats(showtime.getAvailableSeats() + seatNumbers.size());
         showtimeRepository.save(showtime);
 
-        // Hoàn tiền nếu thanh toán bằng tài khoản Movie
+        // Lấy tỷ lệ hoàn tiền từ system settings (mặc định 80%)
+        BigDecimal refundPercentage = systemSettingsService.getDecimalValue("REFUND_PERCENTAGE");
+
+        // Tính số tiền hoàn lại
+        BigDecimal refundAmount = booking.getTotalAmount()
+                .multiply(refundPercentage)
+                .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+
+        // Hoàn tiền vào ví
         PaymentHistory originalPayment = paymentHistoryRepository.findByBookingId(booking.getId())
                 .stream().findFirst().orElse(null);
 
-        if (originalPayment != null && originalPayment.getPaymentMethod().contains("Movie")) {
-            user.setAccountBalance(user.getAccountBalance().add(booking.getTotalAmount()));
+        if (originalPayment != null &&
+                (originalPayment.getPaymentMethod().toLowerCase().contains("wallet") ||
+                        originalPayment.getPaymentMethod().toLowerCase().contains("movie"))) {
+
+            // Hoàn tiền vào ví theo tỷ lệ
+            user.setAccountBalance(user.getAccountBalance().add(refundAmount));
             userRepository.save(user);
 
             // Lưu lịch sử hoàn tiền
             PaymentHistory refund = new PaymentHistory();
             refund.setUser(user);
             refund.setBooking(booking);
-            refund.setAmount(booking.getTotalAmount());
-            refund.setPaymentMethod("Movie Account Refund");
+            refund.setAmount(refundAmount);
+            refund.setPaymentMethod("Wallet Refund (" + refundPercentage.intValue() + "%)");
             refund.setType(PaymentHistory.PaymentType.REFUND);
             refund.setStatus(PaymentHistory.PaymentStatus.COMPLETED);
             refund.setPaymentDate(LocalDateTime.now());
             paymentHistoryRepository.save(refund);
 
             // Tạo transaction hoàn tiền
-            String description = String.format("Hoàn tiền hủy vé %s - %s",
+            String description = String.format("Hoàn tiền hủy vé %s - %s (%d%%)",
                     booking.getMovie().getTitle(),
-                    booking.getTicketCode());
-            walletService.createRefundTransaction(user.getId(), booking.getId(), booking.getTotalAmount(), description);
+                    booking.getTicketCode(),
+                    refundPercentage.intValue());
+            walletService.createRefundTransaction(user.getId(), booking.getId(), refundAmount, description);
         }
 
         bookingRepository.save(booking);
@@ -320,11 +342,21 @@ public class BookingServiceImpl implements BookingService {
             seatsList = new ArrayList<>();
         }
 
-        // Kiểm tra canCancel dựa trên thời gian
+        // Kiểm tra canCancel dựa trên thời gian trước suất chiếu
         boolean canCancel = booking.getCanCancel() && booking.getStatus() == Booking.BookingStatus.PURCHASED;
         if (canCancel) {
-            LocalDateTime cancellationDeadline = booking.getCreatedAt().plusMinutes(60);
-            canCancel = LocalDateTime.now().isBefore(cancellationDeadline);
+            try {
+                Integer minHoursBeforeShowtime = systemSettingsService.getIntValue("MIN_HOURS_BEFORE_CANCEL");
+                LocalDateTime showtimeDateTime = LocalDateTime.of(
+                        booking.getShowtime().getShowDate(),
+                        booking.getShowtime().getShowTime());
+                LocalDateTime cancellationDeadline = showtimeDateTime.minusHours(minHoursBeforeShowtime);
+                canCancel = LocalDateTime.now().isBefore(cancellationDeadline);
+            } catch (Exception e) {
+                // Fallback to old logic if settings not available
+                LocalDateTime cancellationDeadline = booking.getCreatedAt().plusMinutes(60);
+                canCancel = LocalDateTime.now().isBefore(cancellationDeadline);
+            }
         }
 
         return BookingDto.builder()
@@ -332,6 +364,10 @@ public class BookingServiceImpl implements BookingService {
                 .ticketCode(booking.getTicketCode())
                 .userId(booking.getUser().getId())
                 .userName(booking.getUser().getName())
+                .userEmail(booking.getUser().getEmail())
+                .userPhone(booking.getUser().getPhone())
+                .userBirthDate(booking.getUser().getBirthDate())
+                .userCmnd(booking.getUser().getCmnd())
                 .movieId(booking.getMovie().getId())
                 .movieTitle(booking.getMovie().getTitle())
                 .theaterId(booking.getTheater().getId())

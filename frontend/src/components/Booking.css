@@ -145,6 +145,19 @@
   border-color: #007bff;
 }
 
+.time-slot.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background-color: #e9ecef;
+  border-color: #dee2e6;
+  pointer-events: none;
+}
+
+.time-slot.disabled .time-slot-time,
+.time-slot.disabled .time-slot-date {
+  color: #adb5bd;
+}
+
 .seating-section {
   background-color: #ffffff;
   padding: 25px;
@@ -205,6 +218,12 @@
   background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
   border-color: #dc2626;
   cursor: not-allowed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 20px;
+  font-weight: bold;
 }
 
 .seats-grid {
