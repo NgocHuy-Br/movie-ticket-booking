@@ -29,6 +29,12 @@ public interface WalletService {
     Transaction createBookingPaymentTransaction(Long userId, Long bookingId, BigDecimal amount, String description);
 
     /**
+     * Tạo transaction cho thanh toán từ thẻ ngoài (Visa/Mastercard) - chỉ để lưu
+     * lịch sử
+     */
+    Transaction createExternalPaymentTransaction(Long userId, Long bookingId, BigDecimal amount, String paymentMethod);
+
+    /**
      * Tạo transaction cho hoàn tiền
      */
     Transaction createRefundTransaction(Long userId, Long bookingId, BigDecimal amount, String description);

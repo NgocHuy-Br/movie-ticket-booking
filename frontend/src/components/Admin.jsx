@@ -103,6 +103,19 @@ const Admin = () => {
     });
     const [isEditModeGenre, setIsEditModeGenre] = useState(false);
 
+    // User management states
+    const [userSearch, setUserSearch] = useState('');
+    const [userSortField, setUserSortField] = useState('');
+    const [userSortOrder, setUserSortOrder] = useState('asc');
+    const [userRoleFilter, setUserRoleFilter] = useState('');
+    const [userMembershipFilter, setUserMembershipFilter] = useState('');
+
+    // Booking management states
+    const [bookingSearch, setBookingSearch] = useState('');
+    const [bookingSortField, setBookingSortField] = useState('');
+    const [bookingSortOrder, setBookingSortOrder] = useState('asc');
+    const [bookingTheaterFilter, setBookingTheaterFilter] = useState('');
+
     useEffect(() => {
         const user = getUserInfo();
         if (!user || user.role !== 'ADMIN') {
@@ -1023,6 +1036,177 @@ const Admin = () => {
         return [...genreSet].sort();
     };
 
+    // ===== User Management Functions =====
+    const getFilteredAndSortedUsers = () => {
+        let filtered = [...users];
+
+        // Filter by role
+        if (userRoleFilter) {
+            filtered = filtered.filter(user => user.role === userRoleFilter);
+        }
+
+        // Filter by membership level
+        if (userMembershipFilter) {
+            filtered = filtered.filter(user => user.membershipLevel === userMembershipFilter);
+        }
+
+        // Search by name, username, email
+        if (userSearch.trim()) {
+            const searchLower = userSearch.toLowerCase().trim();
+            filtered = filtered.filter(user =>
+                (user.name && user.name.toLowerCase().includes(searchLower)) ||
+                (user.username && user.username.toLowerCase().includes(searchLower)) ||
+                (user.email && user.email.toLowerCase().includes(searchLower))
+            );
+        }
+
+        // Sort
+        if (userSortField) {
+            filtered.sort((a, b) => {
+                let aVal, bVal;
+
+                switch (userSortField) {
+                    case 'name':
+                        aVal = (a.name || '').toLowerCase();
+                        bVal = (b.name || '').toLowerCase();
+                        break;
+                    case 'username':
+                        aVal = (a.username || '').toLowerCase();
+                        bVal = (b.username || '').toLowerCase();
+                        break;
+                    case 'role':
+                        aVal = a.role || '';
+                        bVal = b.role || '';
+                        break;
+                    case 'membershipLevel':
+                        aVal = a.membershipLevel || '';
+                        bVal = b.membershipLevel || '';
+                        break;
+                    case 'points':
+                        aVal = a.points || 0;
+                        bVal = b.points || 0;
+                        break;
+                    case 'accountBalance':
+                        aVal = a.accountBalance || 0;
+                        bVal = b.accountBalance || 0;
+                        break;
+                    case 'createdAt':
+                        aVal = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                        bVal = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                        break;
+                    default:
+                        return 0;
+                }
+
+                // Numeric fields
+                if (['points', 'accountBalance', 'createdAt'].includes(userSortField)) {
+                    return userSortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+                }
+
+                // String fields
+                if (aVal < bVal) return userSortOrder === 'asc' ? -1 : 1;
+                if (aVal > bVal) return userSortOrder === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        return filtered;
+    };
+
+    // ===== Booking Management Functions =====
+    const getFilteredAndSortedBookings = () => {
+        let filtered = [...bookings];
+
+        // Filter by theater
+        if (bookingTheaterFilter) {
+            filtered = filtered.filter(booking => booking.theaterName === bookingTheaterFilter);
+        }
+
+        // Search by ticket code, customer name, or movie title
+        if (bookingSearch.trim()) {
+            const searchLower = bookingSearch.toLowerCase().trim();
+            filtered = filtered.filter(booking =>
+                (booking.ticketCode && booking.ticketCode.toLowerCase().includes(searchLower)) ||
+                (booking.userName && booking.userName.toLowerCase().includes(searchLower)) ||
+                (booking.movieTitle && booking.movieTitle.toLowerCase().includes(searchLower))
+            );
+        }
+
+        // Sort
+        if (bookingSortField) {
+            filtered.sort((a, b) => {
+                let aVal, bVal;
+
+                switch (bookingSortField) {
+                    case 'userName':
+                        aVal = (a.userName || '').toLowerCase();
+                        bVal = (b.userName || '').toLowerCase();
+                        break;
+                    case 'movieTitle':
+                        aVal = (a.movieTitle || '').toLowerCase();
+                        bVal = (b.movieTitle || '').toLowerCase();
+                        break;
+                    case 'theaterName':
+                        aVal = (a.theaterName || '').toLowerCase();
+                        bVal = (b.theaterName || '').toLowerCase();
+                        break;
+                    case 'showDate':
+                        aVal = a.showDate ? new Date(a.showDate).getTime() : 0;
+                        bVal = b.showDate ? new Date(b.showDate).getTime() : 0;
+                        break;
+                    case 'showTime':
+                        aVal = a.showTime || '';
+                        bVal = b.showTime || '';
+                        break;
+                    case 'seats':
+                        aVal = (a.seats || []).join(', ');
+                        bVal = (b.seats || []).join(', ');
+                        break;
+                    case 'totalPrice':
+                        aVal = a.totalPrice || 0;
+                        bVal = b.totalPrice || 0;
+                        break;
+                    case 'status':
+                        aVal = a.status || '';
+                        bVal = b.status || '';
+                        break;
+                    case 'bookingDate':
+                        aVal = a.bookingDate ? new Date(a.bookingDate).getTime() : 0;
+                        bVal = b.bookingDate ? new Date(b.bookingDate).getTime() : 0;
+                        break;
+                    default:
+                        return 0;
+                }
+
+                // Numeric and date fields
+                if (['showDate', 'totalPrice', 'bookingDate'].includes(bookingSortField)) {
+                    return bookingSortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+                }
+
+                // String fields
+                if (aVal < bVal) return bookingSortOrder === 'asc' ? -1 : 1;
+                if (aVal > bVal) return bookingSortOrder === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        return filtered;
+    };
+
+    const handleBookingSort = (field) => {
+        if (bookingSortField === field) {
+            setBookingSortOrder(bookingSortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setBookingSortField(field);
+            setBookingSortOrder('asc');
+        }
+    };
+
+    const getUniqueTheaters = () => {
+        const theaterSet = new Set(bookings.map(b => b.theaterName).filter(t => t));
+        return [...theaterSet].sort();
+    };
+
     // ===== Genre Management Functions =====
     const openAddGenreModal = () => {
         setGenreForm({
@@ -1525,7 +1709,6 @@ const Admin = () => {
                                     </button>
                                 </div>
                             </div>
-                            <p className="section-description">Thêm, sửa, xóa thông tin phim</p>
 
                             <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', alignItems: 'center' }}>
                                 <select
@@ -1738,7 +1921,6 @@ const Admin = () => {
                                     </button>
                                 </div>
                             </div>
-                            <p className="section-description">Quản lý thông tin rạp chiếu phim</p>
 
                             <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', alignItems: 'center' }}>
                                 <select
@@ -1878,7 +2060,6 @@ const Admin = () => {
                                     + Thêm
                                 </button>
                             </div>
-                            <p className="section-description">Tùy chỉnh số ghế và thông tin từng phòng chiếu</p>
 
                             {/* Theater Filter */}
                             <div style={{ marginBottom: '20px' }}>
@@ -2010,7 +2191,6 @@ const Admin = () => {
                                     + Thêm
                                 </button>
                             </div>
-                            <p className="section-description">Tạo và quản lý lịch chiếu phim</p>
 
                             {/* Filters */}
                             <div style={{
@@ -2201,11 +2381,87 @@ const Admin = () => {
                             <div className="section-header">
                                 <h2>👥 Quản lý Người dùng</h2>
                             </div>
-                            <p className="section-description">Xem danh sách và quản lý quyền người dùng</p>
+
+                            <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', alignItems: 'center' }}>
+                                <select
+                                    value={userRoleFilter}
+                                    onChange={(e) => setUserRoleFilter(e.target.value)}
+                                    style={{
+                                        padding: '10px 12px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #ddd',
+                                        fontSize: '14px',
+                                        cursor: 'pointer',
+                                        minWidth: '150px'
+                                    }}
+                                >
+                                    <option value="">👤 Tất cả quyền</option>
+                                    <option value="USER">USER</option>
+                                    <option value="ADMIN">ADMIN</option>
+                                </select>
+
+                                <select
+                                    value={userMembershipFilter}
+                                    onChange={(e) => setUserMembershipFilter(e.target.value)}
+                                    style={{
+                                        padding: '10px 12px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #ddd',
+                                        fontSize: '14px',
+                                        cursor: 'pointer',
+                                        minWidth: '180px'
+                                    }}
+                                >
+                                    <option value="">💎 Tất cả hạng</option>
+                                    <option value="NORMAL">NORMAL</option>
+                                    <option value="GOLD">GOLD</option>
+                                    <option value="PLATINUM">PLATINUM</option>
+                                </select>
+
+                                <div style={{ position: 'relative', flex: '1', maxWidth: '400px' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="🔍 Tìm theo tên, username, email..."
+                                        value={userSearch}
+                                        onChange={(e) => setUserSearch(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '10px 35px 10px 12px',
+                                            borderRadius: '8px',
+                                            border: '1px solid #ddd',
+                                            fontSize: '14px'
+                                        }}
+                                    />
+                                    {userSearch && (
+                                        <button
+                                            onClick={() => setUserSearch('')}
+                                            style={{
+                                                position: 'absolute',
+                                                right: '5px',
+                                                top: '50%',
+                                                transform: 'translateY(-50%)',
+                                                background: 'none',
+                                                border: 'none',
+                                                fontSize: '22px',
+                                                cursor: 'pointer',
+                                                color: '#999',
+                                                padding: '0 8px',
+                                                lineHeight: '1'
+                                            }}
+                                        >
+                                            ×
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
 
                             {users.length === 0 ? (
                                 <div className="empty-state">
                                     <p>Chưa có người dùng nào.</p>
+                                </div>
+                            ) : getFilteredAndSortedUsers().length === 0 ? (
+                                <div className="empty-state">
+                                    <p>Không tìm thấy người dùng nào phù hợp với bộ lọc.</p>
                                 </div>
                             ) : (
                                 <div className="data-table">
@@ -2225,7 +2481,7 @@ const Admin = () => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {users.map((user, index) => (
+                                            {getFilteredAndSortedUsers().map((user, index) => (
                                                 <tr key={user.id}>
                                                     <td>{index + 1}</td>
                                                     <td><strong>{user.name}</strong></td>
@@ -2277,71 +2533,152 @@ const Admin = () => {
                         <div className="content-section">
                             <div className="section-header">
                                 <h2>🎫 Quản lý Đặt vé</h2>
-                                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', alignItems: 'center' }}>
+                                <select
+                                    value={bookingTheaterFilter}
+                                    onChange={(e) => setBookingTheaterFilter(e.target.value)}
+                                    style={{
+                                        padding: '10px 12px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #ddd',
+                                        fontSize: '14px',
+                                        cursor: 'pointer',
+                                        minWidth: '200px'
+                                    }}
+                                >
+                                    <option value="">🎬 Tất cả rạp</option>
+                                    {getUniqueTheaters().map(theater => (
+                                        <option key={theater} value={theater}>{theater}</option>
+                                    ))}
+                                </select>
+
+                                <div style={{ position: 'relative', flex: '1', maxWidth: '400px' }}>
                                     <input
                                         type="text"
-                                        id="ticketSearchInput"
-                                        placeholder="Nhập mã vé để tìm kiếm..."
+                                        placeholder="🔍 Tìm theo mã vé, khách hàng, phim..."
+                                        value={bookingSearch}
+                                        onChange={(e) => setBookingSearch(e.target.value)}
                                         style={{
-                                            padding: '10px 16px',
+                                            width: '100%',
+                                            padding: '10px 35px 10px 12px',
                                             borderRadius: '8px',
-                                            border: '2px solid #e9ecef',
-                                            fontSize: '1em',
-                                            width: '250px'
-                                        }}
-                                        onKeyPress={(e) => {
-                                            if (e.key === 'Enter') {
-                                                searchBookingByTicket(e.target.value);
-                                            }
+                                            border: '1px solid #ddd',
+                                            fontSize: '14px'
                                         }}
                                     />
-                                    <button
-                                        className="add-btn"
-                                        onClick={() => {
-                                            const input = document.getElementById('ticketSearchInput');
-                                            searchBookingByTicket(input.value);
-                                        }}
-                                    >
-                                        🔍 Tìm kiếm
-                                    </button>
-                                    <button
-                                        className="add-btn"
-                                        style={{ background: '#6c757d' }}
-                                        onClick={() => {
-                                            document.getElementById('ticketSearchInput').value = '';
-                                            fetchBookings();
-                                        }}
-                                    >
-                                        Xem tất cả
-                                    </button>
+                                    {bookingSearch && (
+                                        <button
+                                            onClick={() => setBookingSearch('')}
+                                            style={{
+                                                position: 'absolute',
+                                                right: '5px',
+                                                top: '50%',
+                                                transform: 'translateY(-50%)',
+                                                background: 'none',
+                                                border: 'none',
+                                                fontSize: '22px',
+                                                cursor: 'pointer',
+                                                color: '#999',
+                                                padding: '0 8px',
+                                                lineHeight: '1'
+                                            }}
+                                        >
+                                            ×
+                                        </button>
+                                    )}
                                 </div>
+
+                                <button
+                                    className="add-btn"
+                                    style={{ background: '#6c757d', width: 'auto', padding: '10px 35px' }}
+                                    onClick={() => {
+                                        setBookingSearch('');
+                                        setBookingTheaterFilter('');
+                                        setBookingSortField('');
+                                        setBookingSortOrder('asc');
+                                    }}
+                                >
+                                    Xem tất cả
+                                </button>
                             </div>
-                            <p className="section-description">Xem và quản lý danh sách đặt vé</p>
 
                             {bookings.length === 0 ? (
                                 <div className="empty-state">
                                     <p>Chưa có đặt vé nào.</p>
+                                </div>
+                            ) : getFilteredAndSortedBookings().length === 0 ? (
+                                <div className="empty-state">
+                                    <p>Không tìm thấy đặt vé nào phù hợp với bộ lọc.</p>
                                 </div>
                             ) : (
                                 <div className="data-table">
                                     <table>
                                         <thead>
                                             <tr>
+                                                <th style={{ width: '50px' }}>TT</th>
                                                 <th>Mã vé</th>
-                                                <th>Khách hàng</th>
-                                                <th>Phim</th>
-                                                <th>Rạp</th>
-                                                <th>Ngày chiếu</th>
-                                                <th>Giờ chiếu</th>
-                                                <th>Ghế</th>
-                                                <th>Tổng tiền</th>
-                                                <th>Trạng thái</th>
-                                                <th>Ngày đặt</th>
+                                                <th
+                                                    onClick={() => handleBookingSort('userName')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Khách hàng {bookingSortField === 'userName' ? (bookingSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleBookingSort('movieTitle')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Phim {bookingSortField === 'movieTitle' ? (bookingSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleBookingSort('theaterName')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Rạp {bookingSortField === 'theaterName' ? (bookingSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleBookingSort('showDate')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Ngày chiếu {bookingSortField === 'showDate' ? (bookingSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleBookingSort('showTime')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Giờ chiếu {bookingSortField === 'showTime' ? (bookingSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleBookingSort('seats')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Ghế {bookingSortField === 'seats' ? (bookingSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleBookingSort('totalPrice')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Tổng tiền {bookingSortField === 'totalPrice' ? (bookingSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleBookingSort('status')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Trạng thái {bookingSortField === 'status' ? (bookingSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
+                                                <th
+                                                    onClick={() => handleBookingSort('bookingDate')}
+                                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                >
+                                                    Ngày đặt {bookingSortField === 'bookingDate' ? (bookingSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {bookings.map(booking => (
+                                            {getFilteredAndSortedBookings().map((booking, index) => (
                                                 <tr key={booking.id}>
+                                                    <td>{index + 1}</td>
                                                     <td><strong>{booking.ticketCode}</strong></td>
                                                     <td>{booking.userName}</td>
                                                     <td>{booking.movieTitle}</td>
@@ -2372,7 +2709,6 @@ const Admin = () => {
                             <div className="section-header">
                                 <h2>📊 Thống kê & Báo cáo</h2>
                             </div>
-                            <p className="section-description">Xem chi tiết doanh thu và thống kê hệ thống</p>
 
                             {statistics ? (
                                 <>
@@ -2514,9 +2850,6 @@ const Admin = () => {
                             <div className="section-header">
                                 <h2>⚙️ Cấu hình Hệ thống</h2>
                             </div>
-                            <p className="section-description">
-                                Cài đặt chung cho toàn hệ thống. Thay đổi sẽ áp dụng cho các suất chiếu mới tạo.
-                            </p>
 
                             <div className="settings-container">
                                 <div className="settings-section">

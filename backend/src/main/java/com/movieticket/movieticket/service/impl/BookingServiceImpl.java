@@ -123,7 +123,7 @@ public class BookingServiceImpl implements BookingService {
         payment.setPaymentDate(LocalDateTime.now());
         paymentHistoryRepository.save(payment);
 
-        // Tạo transaction nếu thanh toán bằng Movie account
+        // Tạo transaction nếu thanh toán bằng Movie account hoặc Wallet
         if ("movie".equalsIgnoreCase(request.getPaymentMethod())
                 || "wallet".equalsIgnoreCase(request.getPaymentMethod())) {
             String description = String.format("Thanh toán vé %s - %s - %d ghế",
@@ -131,6 +131,12 @@ public class BookingServiceImpl implements BookingService {
                     ticketCode,
                     bookedSeats);
             walletService.createBookingPaymentTransaction(user.getId(), savedBooking.getId(), totalPrice, description);
+        } else {
+            // Thanh toán bằng phương thức ngoài (Visa, MoMo, ZaloPay, Bank...)
+            // Tạo transaction để lưu lịch sử nhưng không trừ tiền từ ví
+            String paymentMethodName = getPaymentMethodName(request.getPaymentMethod());
+            walletService.createExternalPaymentTransaction(user.getId(), savedBooking.getId(), totalPrice,
+                    paymentMethodName);
         }
 
         return convertToDto(savedBooking);
