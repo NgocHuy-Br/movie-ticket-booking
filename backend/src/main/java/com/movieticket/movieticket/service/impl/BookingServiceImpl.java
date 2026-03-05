@@ -66,7 +66,8 @@ public class BookingServiceImpl implements BookingService {
         BigDecimal totalPrice = showtime.getPrice().multiply(BigDecimal.valueOf(bookedSeats));
 
         // Kiểm tra số dư nếu thanh toán bằng tài khoản Movie
-        if ("movie".equalsIgnoreCase(request.getPaymentMethod())) {
+        if ("movie".equalsIgnoreCase(request.getPaymentMethod())
+                || "wallet".equalsIgnoreCase(request.getPaymentMethod())) {
             if (user.getAccountBalance().compareTo(totalPrice) < 0) {
                 throw new RuntimeException("Insufficient balance. Please top up or choose another payment method.");
             }
@@ -88,6 +89,8 @@ public class BookingServiceImpl implements BookingService {
         booking.setMovie(showtime.getMovie());
         booking.setTheater(showtime.getTheater());
         booking.setShowtime(showtime);
+        booking.setShowDate(showtime.getShowDate());
+        booking.setShowTime(showtime.getShowTime());
         booking.setTicketCode(ticketCode);
 
         // Chuyển danh sách ghế thành JSON string
@@ -118,7 +121,8 @@ public class BookingServiceImpl implements BookingService {
         paymentHistoryRepository.save(payment);
 
         // Tạo transaction nếu thanh toán bằng Movie account
-        if ("movie".equalsIgnoreCase(request.getPaymentMethod())) {
+        if ("movie".equalsIgnoreCase(request.getPaymentMethod())
+                || "wallet".equalsIgnoreCase(request.getPaymentMethod())) {
             String description = String.format("Thanh toán vé %s - %s - %d ghế",
                     showtime.getMovie().getTitle(),
                     ticketCode,
@@ -286,18 +290,24 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private String generateTicketCode() {
-        LocalDateTime now = LocalDateTime.now();
-        String datePart = now.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        int randomPart = new Random().nextInt(10000);
-        return String.format("MV%s%04d", datePart, randomPart);
+        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        Random random = new Random();
+        StringBuilder ticketCode = new StringBuilder(10);
+
+        for (int i = 0; i < 10; i++) {
+            ticketCode.append(characters.charAt(random.nextInt(characters.length())));
+        }
+
+        return ticketCode.toString();
     }
 
     private String getPaymentMethodName(String method) {
         return switch (method.toLowerCase()) {
+            case "visa" -> "Thẻ Visa/Mastercard";
+            case "wallet", "movie" -> "Ví Movie";
             case "momo" -> "Ví MoMo";
             case "zalopay" -> "Ví ZaloPay";
             case "bank" -> "Chuyển khoản ngân hàng";
-            case "movie" -> "Movie Account";
             default -> method;
         };
     }

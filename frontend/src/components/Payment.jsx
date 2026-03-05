@@ -197,89 +197,78 @@ const Payment = () => {
     }
   };
 
-  const handleConfirmPayment = () => {
-    // Sinh mã vé
-    const ticketCode = generateTicketCode();
-
-    // Lưu thông tin vé vào localStorage (tạm thời, sẽ lưu vào database sau)
-    const newBooking = {
-      id: Date.now(),
-      movie: bookingData.movieTitle,
-      theater: bookingData.theater,
-      date: bookingData.showDate || new Date().toISOString().split('T')[0],
-      time: bookingData.showTime || bookingData.time,
-      seats: bookingData.seats,
-      total: bookingData.totalPrice,
-      status: 'purchased', // Mặc định là 'purchased', có thể đổi thành 'cancelled' nếu huỷ
-      ticketCode: ticketCode
-    };
-
-    // Lấy danh sách vé hiện có
+  const handleConfirmPayment = async () => {
     try {
-      const existingHistory = localStorage.getItem('bookingHistory');
-      let bookingHistory = [];
-      if (existingHistory) {
-        bookingHistory = JSON.parse(existingHistory);
-      }
-      bookingHistory.unshift(newBooking); // Thêm vào đầu danh sách
-      localStorage.setItem('bookingHistory', JSON.stringify(bookingHistory));
-    } catch (error) {
-      console.error('Error saving booking history:', error);
-    }
+      setShowConfirmModal(false);
 
-    // Nếu thanh toán bằng ví, trừ tiền từ tài khoản
-    if (paymentInfo.paymentMethod === 'wallet') {
-      const newBalance = accountBalance - bookingData.totalPrice;
-      setAccountBalance(newBalance);
-      localStorage.setItem('accountBalance', newBalance.toString());
-    }
-
-    // Lưu vào lịch sử thanh toán
-    try {
-      const existingPaymentHistory = localStorage.getItem('paymentHistory');
-      let paymentHistory = [];
-      if (existingPaymentHistory) {
-        paymentHistory = JSON.parse(existingPaymentHistory);
-      }
-
-      const newPayment = {
-        id: Date.now(),
-        date: new Date().toISOString().split('T')[0],
-        amount: bookingData.totalPrice,
-        method: getPaymentMethodName(paymentInfo.paymentMethod),
-        status: 'paid',
-        type: 'purchase',
-        ticketCode: ticketCode
+      // Chuẩn bị request data
+      const bookingRequest = {
+        showtimeId: bookingData.showtimeId,
+        seats: bookingData.seats,
+        paymentMethod: paymentInfo.paymentMethod === 'wallet' ? 'wallet' : 'visa'
       };
 
-      paymentHistory.unshift(newPayment);
-      localStorage.setItem('paymentHistory', JSON.stringify(paymentHistory));
+      // Gọi API tạo booking
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:8080/api/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(bookingRequest)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Đặt vé thất bại');
+      }
+
+      const booking = result.data;
+
+      // Cập nhật số dư nếu thanh toán bằng ví
+      if (paymentInfo.paymentMethod === 'wallet') {
+        // Fetch updated balance from backend
+        const userResponse = await fetch('http://localhost:8080/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const userData = await userResponse.json();
+        if (userData.success && userData.data.accountBalance !== undefined) {
+          setAccountBalance(userData.data.accountBalance);
+          // Update localStorage userInfo
+          const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+          userInfo.accountBalance = userData.data.accountBalance;
+          localStorage.setItem('userInfo', JSON.stringify(userInfo));
+          // Dispatch event to update header
+          window.dispatchEvent(new Event('userProfileUpdate'));
+        }
+      }
+
+      // Xóa thông tin booking đã lưu sau khi thanh toán thành công
+      const bookingKey = `booking_${bookingData.movieId}`;
+      localStorage.removeItem(bookingKey);
+
+      // Lưu thông tin thành công để hiển thị trong popup
+      setSuccessData({
+        movieTitle: booking.movieTitle,
+        theater: booking.theaterName,
+        showDate: booking.showDate,
+        showTime: booking.showTime,
+        seats: booking.seats,
+        totalPrice: booking.totalPrice,
+        paymentMethod: getPaymentMethodName(paymentInfo.paymentMethod),
+        ticketCode: booking.ticketCode,
+        email: paymentInfo.email
+      });
+
+      // Hiển thị popup thành công
+      setShowSuccessModal(true);
     } catch (error) {
-      console.error('Error saving payment history:', error);
+      console.error('Error creating booking:', error);
+      alert(error.message || 'Đã có lỗi xảy ra khi đặt vé. Vui lòng thử lại!');
+      setShowConfirmModal(false);
     }
-
-    // Xử lý thanh toán ở đây
-    setShowConfirmModal(false);
-
-    // Xóa thông tin booking đã lưu sau khi thanh toán thành công
-    const bookingKey = `booking_${bookingData.movieId}`;
-    localStorage.removeItem(bookingKey);
-
-    // Lưu thông tin thành công để hiển thị trong popup
-    setSuccessData({
-      movieTitle: bookingData.movieTitle,
-      theater: bookingData.theater,
-      showDate: bookingData.showDate,
-      showTime: bookingData.showTime,
-      seats: bookingData.seats,
-      totalPrice: bookingData.totalPrice,
-      paymentMethod: getPaymentMethodName(paymentInfo.paymentMethod),
-      ticketCode: ticketCode,
-      email: paymentInfo.email
-    });
-
-    // Hiển thị popup thành công
-    setShowSuccessModal(true);
   };
 
   const getPaymentMethodName = (method) => {

@@ -72,6 +72,24 @@ public class Booking {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    // Explicit getter/setter for showTime (Lombok workaround)
+    public LocalTime getShowTime() {
+        return showTime;
+    }
+
+    public void setShowTime(LocalTime showTime) {
+        this.showTime = showTime;
+    }
+
+    // Explicit getter/setter for showtime relationship
+    public Showtime getShowtime() {
+        return showtime;
+    }
+
+    public void setShowtime(Showtime showtime) {
+        this.showtime = showtime;
+    }
+
     public enum BookingStatus {
         PURCHASED, CANCELLED, USED
     }
