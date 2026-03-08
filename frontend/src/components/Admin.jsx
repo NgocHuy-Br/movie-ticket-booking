@@ -128,6 +128,7 @@ const Admin = () => {
 
     // Fetch data based on active tab
     useEffect(() => {
+        console.log('🔄 Active tab changed to:', activeTab);
         if (activeTab === 'movies') {
             fetchMovies();
             fetchGenres();
@@ -140,6 +141,7 @@ const Admin = () => {
             fetchShowtimes();
             fetchTheaters(); // Need theaters for filter dropdown
         } else if (activeTab === 'users') {
+            console.log('👥 Fetching users for users tab...');
             fetchUsers();
         } else if (activeTab === 'bookings') {
             fetchBookings();
@@ -149,6 +151,11 @@ const Admin = () => {
             fetchSettings();
         }
     }, [activeTab]);
+
+    // Debug: Log whenever users state changes
+    useEffect(() => {
+        console.log('📊 Users state changed. Count:', users.length, 'Users:', users);
+    }, [users]);
 
     const fetchMovies = async () => {
         try {
@@ -261,15 +268,39 @@ const Admin = () => {
 
     const fetchUsers = async () => {
         try {
+            console.log('🔍 Fetching users...');
+            console.log('🔑 Token:', localStorage.getItem('token')?.substring(0, 20) + '...');
             const response = await fetch('http://localhost:8080/api/admin/users', {
                 headers: getAuthHeaders()
             });
+            console.log('📡 Response status:', response.status);
+            console.log('📡 Response ok:', response.ok);
+
+            if (!response.ok) {
+                console.error('❌ Response not OK, status:', response.status);
+                const errorText = await response.text();
+                console.error('❌ Error response:', errorText);
+                alert(`Lỗi khi tải danh sách người dùng: ${response.status} ${response.statusText}`);
+                return;
+            }
+
             const data = await response.json();
-            if (data.success) {
-                setUsers(data.data || []);
+            console.log('📦 Users response:', data);
+            console.log('✅ Users data array:', data.data);
+            console.log('📊 Data type:', typeof data.data, 'Is array:', Array.isArray(data.data));
+
+            if (data.success && data.data) {
+                console.log('🎯 Setting users to state:', data.data.length, 'users');
+                setUsers(data.data);
+                console.log('✅ Users state updated');
+            } else {
+                console.error('❌ API returned success=false or no data:', data);
+                alert(`Lỗi API: ${data.message || 'Unknown error'}`);
             }
         } catch (error) {
-            console.error('Failed to fetch users:', error);
+            console.error('❌ Failed to fetch users:', error);
+            console.error('❌ Error stack:', error.stack);
+            alert(`Lỗi kết nối: ${error.message}`);
         }
     };
 

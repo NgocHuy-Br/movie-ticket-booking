@@ -20,7 +20,8 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:3000" })
+@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:5175",
+        "http://localhost:3000" })
 public class AdminController {
 
     private final MovieService movieService;
@@ -333,6 +334,7 @@ public class AdminController {
     @GetMapping("/users")
     public ResponseEntity<ApiResponse<List<UserDto>>> getAllUsers() {
         try {
+            System.out.println("=== GET /api/admin/users called ===");
             List<UserDto> users = userRepository.findAll().stream()
                     .map(user -> UserDto.builder()
                             .id(user.getId())
@@ -344,16 +346,22 @@ public class AdminController {
                             .email(user.getEmail())
                             .username(user.getUsername())
                             .avatar(user.getAvatar())
-                            .role(user.getRole().name())
-                            .membershipLevel(user.getMembershipLevel().name())
-                            .points(user.getPoints())
-                            .accountBalance(user.getAccountBalance())
+                            .role(user.getRole() != null ? user.getRole().name() : "USER")
+                            .membershipLevel(
+                                    user.getMembershipLevel() != null ? user.getMembershipLevel().name() : "BRONZE")
+                            .points(user.getPoints() != null ? user.getPoints() : 0)
+                            .accountBalance(
+                                    user.getAccountBalance() != null ? user.getAccountBalance() : BigDecimal.ZERO)
                             .createdAt(user.getCreatedAt())
                             .updatedAt(user.getUpdatedAt())
                             .build())
                     .collect(Collectors.toList());
+            System.out.println("Found " + users.size() + " users in database");
+            System.out.println("Returning success response with users");
             return ResponseEntity.ok(ApiResponse.success("Get all users successfully", users));
         } catch (Exception e) {
+            System.err.println("Error getting users: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Failed to get users: " + e.getMessage()));
         }
