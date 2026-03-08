@@ -227,19 +227,32 @@
     color: #2e7d32;
 }
 
+.badge.age-K {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.badge.age-T13,
 .badge.age-C13 {
     background: #fff3e0;
     color: #f57c00;
 }
 
+.badge.age-T16,
 .badge.age-C16 {
     background: #ffe0b2;
     color: #e65100;
 }
 
+.badge.age-T18,
 .badge.age-C18 {
     background: #ffebee;
     color: #c62828;
+}
+
+.badge.age-C {
+    background: #424242;
+    color: #ffffff;
 }
 
 /* Status Badges */
@@ -342,6 +355,18 @@
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
+}
+
+.stat-card.today-bookings {
+    background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+    color: white;
+    border: none;
+}
+
+.stat-card.today-bookings .stat-info h3,
+.stat-card.today-bookings .stat-info p,
+.stat-card.today-bookings .stat-info small {
+    color: white;
 }
 
 .stat-icon {
@@ -958,6 +983,7 @@
         width: 100%;
     }
 }
+
 /* Genre Management Modal */
 .genre-modal {
     max-width: 1000px !important;

@@ -1067,6 +1067,16 @@ const Admin = () => {
         return [...genreSet].sort();
     };
 
+    // Helper function to convert membership level to Vietnamese
+    const getMembershipLevelLabel = (level) => {
+        const labels = {
+            'NORMAL': 'ĐỒNG',
+            'GOLD': 'VÀNG',
+            'PLATINUM': 'BẠCH KIM'
+        };
+        return labels[level] || level;
+    };
+
     // ===== User Management Functions =====
     const getFilteredAndSortedUsers = () => {
         let filtered = [...users];
@@ -2444,9 +2454,9 @@ const Admin = () => {
                                     }}
                                 >
                                     <option value="">💎 Tất cả hạng</option>
-                                    <option value="NORMAL">NORMAL</option>
-                                    <option value="GOLD">GOLD</option>
-                                    <option value="PLATINUM">PLATINUM</option>
+                                    <option value="NORMAL">ĐỒNG</option>
+                                    <option value="GOLD">VÀNG</option>
+                                    <option value="PLATINUM">BẠCH KIM</option>
                                 </select>
 
                                 <div style={{ position: 'relative', flex: '1', maxWidth: '400px' }}>
@@ -2529,7 +2539,7 @@ const Admin = () => {
                                                             <span style={{ color: '#999' }}>-</span>
                                                         ) : (
                                                             <span className={`membership-badge membership-${user.membershipLevel}`}>
-                                                                {user.membershipLevel}
+                                                                {getMembershipLevelLabel(user.membershipLevel)}
                                                             </span>
                                                         )}
                                                     </td>
@@ -2770,12 +2780,12 @@ const Admin = () => {
                                             </div>
                                         </div>
 
-                                        <div className="stat-card highlight">
+                                        <div className="stat-card today-bookings">
                                             <div className="stat-icon">📅</div>
                                             <div className="stat-info">
                                                 <h3>{statistics.todayBookings || 0} vé</h3>
                                                 <p>Đặt vé hôm nay</p>
-                                                <small style={{ fontSize: '0.9em', color: '#666' }}>
+                                                <small style={{ fontSize: '0.9em', opacity: 0.9 }}>
                                                     {(statistics.todayRevenue || 0).toLocaleString('vi-VN')}₫
                                                 </small>
                                             </div>
@@ -3339,10 +3349,12 @@ const Admin = () => {
                                         value={movieForm.ageRating}
                                         onChange={handleMovieFormChange}
                                     >
-                                        <option value="P">P - Phổ biến</option>
-                                        <option value="C13">C13 - Trên 13 tuổi</option>
-                                        <option value="C16">C16 - Trên 16 tuổi</option>
-                                        <option value="C18">C18 - Trên 18 tuổi</option>
+                                        <option value="P">P - Phổ biến (mọi lứa tuổi)</option>
+                                        <option value="K">K - Dành cho trẻ em (có người giám hộ)</option>
+                                        <option value="T13">T13 - Cấm khán giả dưới 13 tuổi</option>
+                                        <option value="T16">T16 - Cấm khán giả dưới 16 tuổi</option>
+                                        <option value="T18">T18 - Cấm khán giả dưới 18 tuổi</option>
+                                        <option value="C">C - Cấm chiếu</option>
                                     </select>
                                 </div>
 

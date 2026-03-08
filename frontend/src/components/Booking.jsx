@@ -237,6 +237,41 @@ const Booking = () => {
       return;
     }
 
+    // Age validation
+    const userInfo = getUserInfo();
+    if (userInfo && userInfo.birthDate && movie && movie.ageRating) {
+      const birthDate = new Date(userInfo.birthDate);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+
+      const rating = movie.ageRating;
+      let requiredAge = 0;
+      let ratingMessage = '';
+
+      if (rating === 'T13') {
+        requiredAge = 13;
+        ratingMessage = 'T13 - Cấm khán giả dưới 13 tuổi';
+      } else if (rating === 'T16') {
+        requiredAge = 16;
+        ratingMessage = 'T16 - Cấm khán giả dưới 16 tuổi';
+      } else if (rating === 'T18' || rating === 'C18') {
+        requiredAge = 18;
+        ratingMessage = 'T18 - Cấm khán giả dưới 18 tuổi';
+      } else if (rating === 'C') {
+        alert('Phim này đã bị cấm chiếu và không thể đặt vé.');
+        return;
+      }
+
+      if (requiredAge > 0 && age < requiredAge) {
+        alert(`Bạn không đủ tuổi để xem phim này!\n\nPhim được phân loại: ${ratingMessage}\nTuổi của bạn: ${age} tuổi\nYêu cầu tối thiểu: ${requiredAge} tuổi`);
+        return;
+      }
+    }
+
     const showtime = showtimes.find(s => s.id === selectedShowtime);
     if (!showtime) return;
 

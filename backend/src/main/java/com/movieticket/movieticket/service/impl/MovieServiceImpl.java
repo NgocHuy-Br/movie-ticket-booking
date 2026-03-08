@@ -8,11 +8,15 @@ import com.movieticket.movieticket.repository.ShowtimeRepository;
 import com.movieticket.movieticket.repository.SystemSettingsRepository;
 import com.movieticket.movieticket.service.MovieService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -224,6 +228,57 @@ public class MovieServiceImpl implements MovieService {
                 movieRepository.save(movie);
             }
         }
+    }
+
+    @Override
+    public List<MovieDto> getHotMovies(int limit) {
+        Pageable pageable = PageRequest.of(0, limit);
+        return movieRepository.findHotMovies(pageable).stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<MovieDto> getNewMovies(int limit) {
+        Pageable pageable = PageRequest.of(0, limit);
+        return movieRepository.findNewMovies(pageable).stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Map<String, Object> getFilteredMovies(String search, String genre, String status, String sortBy, int page,
+            int size) {
+        // Default values
+        if (sortBy == null || sortBy.isEmpty()) {
+            sortBy = "releaseDate";
+        }
+
+        Movie.MovieStatus movieStatus = null;
+        if (status != null && !status.isEmpty() && !status.equalsIgnoreCase("ALL")) {
+            try {
+                movieStatus = Movie.MovieStatus.valueOf(status.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                movieStatus = null;
+            }
+        }
+
+        String searchTerm = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+        String genreFilter = (genre != null && !genre.isEmpty() && !genre.equalsIgnoreCase("ALL")) ? genre : null;
+
+        Pageable pageable = PageRequest.of(page, size);
+        List<Movie> movies = movieRepository.findMoviesWithFilters(searchTerm, genreFilter, movieStatus, sortBy,
+                pageable);
+        long totalElements = movieRepository.countMoviesWithFilters(searchTerm, genreFilter, movieStatus);
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("movies", movies.stream().map(this::convertToDto).collect(Collectors.toList()));
+        response.put("currentPage", page);
+        response.put("totalPages", totalPages);
+        response.put("totalElements", totalElements);
+
+        return response;
     }
 
     private MovieDto convertToDto(Movie movie) {

@@ -25,6 +25,33 @@ public class MovieController {
         return ResponseEntity.ok(ApiResponse.success("Get all movies successfully", movies));
     }
 
+    @GetMapping("/hot")
+    public ResponseEntity<ApiResponse<List<MovieDto>>> getHotMovies(
+            @RequestParam(defaultValue = "5") int limit) {
+        List<MovieDto> movies = movieService.getHotMovies(limit);
+        return ResponseEntity.ok(ApiResponse.success("Get hot movies successfully", movies));
+    }
+
+    @GetMapping("/new")
+    public ResponseEntity<ApiResponse<List<MovieDto>>> getNewMovies(
+            @RequestParam(defaultValue = "5") int limit) {
+        List<MovieDto> movies = movieService.getNewMovies(limit);
+        return ResponseEntity.ok(ApiResponse.success("Get new movies successfully", movies));
+    }
+
+    @GetMapping("/filtered")
+    public ResponseEntity<ApiResponse<java.util.Map<String, Object>>> getFilteredMovies(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String genre,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "releaseDate") String sortBy,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        java.util.Map<String, Object> result = movieService.getFilteredMovies(search, genre, status, sortBy, page,
+                size);
+        return ResponseEntity.ok(ApiResponse.success("Get filtered movies successfully", result));
+    }
+
     @GetMapping("/now-showing")
     public ResponseEntity<ApiResponse<List<MovieDto>>> getNowShowingMovies() {
         List<MovieDto> movies = movieService.getNowShowingMovies();
