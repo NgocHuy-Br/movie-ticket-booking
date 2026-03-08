@@ -11,12 +11,21 @@ const Payment = () => {
   const bookingData = location.state || {
     movieTitle: 'Avengers: Endgame',
     movieId: 1,
+    showtimeId: 1,  // CRITICAL: Must have showtimeId for booking API
     theater: 'CGV Vincom Center',
     showDate: '2024-03-04',
     showTime: '11:00',
     seats: ['A1', 'A2'],
     totalPrice: 170000
   };
+
+  // Debug log for booking data
+  useEffect(() => {
+    console.log('📋 Payment page received booking data:', bookingData);
+    if (!bookingData.showtimeId) {
+      console.error('❌ Missing showtimeId in booking data!');
+    }
+  }, []);
 
   const [paymentInfo, setPaymentInfo] = useState({
     fullName: '',
@@ -201,12 +210,21 @@ const Payment = () => {
     try {
       setShowConfirmModal(false);
 
+      // Validate required booking data
+      if (!bookingData.showtimeId || !bookingData.seats || bookingData.seats.length === 0) {
+        alert('Thông tin đặt vé không hợp lệ. Vui lòng quay lại trang đặt vé.');
+        navigate('/');
+        return;
+      }
+
       // Chuẩn bị request data
       const bookingRequest = {
         showtimeId: bookingData.showtimeId,
         seats: bookingData.seats,
         paymentMethod: paymentInfo.paymentMethod === 'wallet' ? 'wallet' : 'visa'
       };
+
+      console.log('🎫 Creating booking with request:', bookingRequest);
 
       // Gọi API tạo booking
       const token = localStorage.getItem('token');
@@ -218,6 +236,14 @@ const Payment = () => {
         },
         body: JSON.stringify(bookingRequest)
       });
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const errorText = await response.text();
+        console.error('Non-JSON response:', errorText);
+        throw new Error('Lỗi server. Vui lòng kiểm tra backend logs.');
+      }
 
       const result = await response.json();
 

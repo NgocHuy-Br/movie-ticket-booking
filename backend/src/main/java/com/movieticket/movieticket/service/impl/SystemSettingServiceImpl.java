@@ -97,5 +97,65 @@ public class SystemSettingServiceImpl implements SystemSettingService {
             setting.setDataType("DECIMAL");
             systemSettingRepository.save(setting);
         }
+
+        // POINTS_PER_THOUSAND - Số điểm tích lũy cho mỗi 1000đ chi tiêu
+        if (systemSettingRepository.findBySettingKey("POINTS_PER_THOUSAND").isEmpty()) {
+            SystemSetting setting = new SystemSetting();
+            setting.setSettingKey("POINTS_PER_THOUSAND");
+            setting.setSettingValue("1");
+            setting.setDescription("Số điểm thưởng cho mỗi 1000đ chi tiêu (mặc định 1 điểm)");
+            setting.setDataType("INTEGER");
+            systemSettingRepository.save(setting);
+        }
+
+        // GOLD_POINTS_THRESHOLD - Điểm để đạt hạng Gold
+        if (systemSettingRepository.findBySettingKey("GOLD_POINTS_THRESHOLD").isEmpty()) {
+            SystemSetting setting = new SystemSetting();
+            setting.setSettingKey("GOLD_POINTS_THRESHOLD");
+            setting.setSettingValue("100");
+            setting.setDescription("Số điểm cần thiết để đạt hạng Gold (mặc định 100 điểm)");
+            setting.setDataType("INTEGER");
+            systemSettingRepository.save(setting);
+        }
+
+        // PLATINUM_POINTS_THRESHOLD - Điểm để đạt hạng Platinum
+        if (systemSettingRepository.findBySettingKey("PLATINUM_POINTS_THRESHOLD").isEmpty()) {
+            SystemSetting setting = new SystemSetting();
+            setting.setSettingKey("PLATINUM_POINTS_THRESHOLD");
+            setting.setSettingValue("500");
+            setting.setDescription("Số điểm cần thiết để đạt hạng Platinum (mặc định 500 điểm)");
+            setting.setDataType("INTEGER");
+            systemSettingRepository.save(setting);
+        }
+
+        // GOLD_DISCOUNT_PERCENT - Phần trăm giảm giá cho hạng Gold
+        if (systemSettingRepository.findBySettingKey("GOLD_DISCOUNT_PERCENT").isEmpty()) {
+            SystemSetting setting = new SystemSetting();
+            setting.setSettingKey("GOLD_DISCOUNT_PERCENT");
+            setting.setSettingValue("5");
+            setting.setDescription("Phần trăm giảm giá cho thành viên Gold (mặc định 5%)");
+            setting.setDataType("DECIMAL");
+            systemSettingRepository.save(setting);
+        }
+
+        // PLATINUM_DISCOUNT_PERCENT - Phần trăm giảm giá cho hạng Platinum
+        if (systemSettingRepository.findBySettingKey("PLATINUM_DISCOUNT_PERCENT").isEmpty()) {
+            SystemSetting setting = new SystemSetting();
+            setting.setSettingKey("PLATINUM_DISCOUNT_PERCENT");
+            setting.setSettingValue("10");
+            setting.setDescription("Phần trăm giảm giá cho thành viên Platinum (mặc định 10%)");
+            setting.setDataType("DECIMAL");
+            systemSettingRepository.save(setting);
+        }
+
+        // MAX_TICKETS_PER_BOOKING - Số lượng vé tối đa cho một lần đặt
+        if (systemSettingRepository.findBySettingKey("MAX_TICKETS_PER_BOOKING").isEmpty()) {
+            SystemSetting setting = new SystemSetting();
+            setting.setSettingKey("MAX_TICKETS_PER_BOOKING");
+            setting.setSettingValue("10");
+            setting.setDescription("Số lượng vé tối đa có thể đặt trong một lần (mặc định 10 vé)");
+            setting.setDataType("INTEGER");
+            systemSettingRepository.save(setting);
+        }
     }
 }

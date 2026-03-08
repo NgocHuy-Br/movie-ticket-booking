@@ -33,7 +33,11 @@ public class BookingDto {
     private LocalTime showTime;
     private List<String> seats;
     private Integer numberOfSeats;
+    private BigDecimal originalPrice;
+    private BigDecimal membershipDiscountPercent;
+    private BigDecimal membershipDiscountAmount;
     private BigDecimal totalPrice;
+    private Integer pointsEarned;
     private String status; // ACTIVE, CANCELLED
     private Boolean canCancel;
     private LocalDateTime bookingDate;

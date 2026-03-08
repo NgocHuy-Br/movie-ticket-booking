@@ -122,7 +122,25 @@ const MyMovies = () => {
                     <p style="font-size: 18px; margin: 8px 0;"><strong>Ngày chiếu:</strong> ${formatDate(booking.showDate)}</p>
                     <p style="font-size: 18px; margin: 8px 0;"><strong>Giờ chiếu:</strong> ${formatTime(booking.showTime)}</p>
                     <p style="font-size: 18px; margin: 8px 0;"><strong>Ghế:</strong> ${booking.seats.join(', ')}</p>
-                    <p style="font-size: 20px; margin: 8px 0; color: #e50914;"><strong>Tổng tiền: ${formatCurrency(booking.totalPrice)}</strong></p>
+                    
+                    ${booking.originalPrice && booking.membershipDiscountAmount ? `
+                        <p style="font-size: 18px; margin: 8px 0; margin-top: 15px;"><strong>Giá gốc:</strong> ${formatCurrency(booking.originalPrice)}</p>
+                        <p style="font-size: 18px; margin: 8px 0; color: #4CAF50;">
+                            <strong>💎 Giảm giá hạng thành viên:</strong> 
+                            -${formatCurrency(booking.membershipDiscountAmount)} 
+                            (${booking.membershipDiscountPercent}%)
+                        </p>
+                    ` : ''}
+                    
+                    <p style="font-size: 20px; margin: 8px 0; margin-top: 10px; color: #e50914;">
+                        <strong>Tổng tiền: ${formatCurrency(booking.totalPrice)}</strong>
+                    </p>
+                    
+                    ${booking.pointsEarned ? `
+                        <p style="font-size: 16px; margin: 8px 0; color: #FF9800; margin-top: 8px;">
+                            ⭐ <strong>Điểm thưởng đã tích lũy:</strong> ${booking.pointsEarned} điểm
+                        </p>
+                    ` : ''}
                 </div>
                 
                 <hr style="border: 1px solid #ccc; margin: 25px 0;">

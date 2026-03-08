@@ -15,13 +15,15 @@
 .balance-header h3 {
     margin: 0 0 8px 0;
     font-size: 16px;
-    opacity: 0.9;
+    color: #ffffff;
+    opacity: 1;
 }
 
 .balance-amount {
     font-size: 36px;
     font-weight: 700;
     margin: 12px 0 20px 0;
+    color: #ffffff;
 }
 
 .deposit-btn {

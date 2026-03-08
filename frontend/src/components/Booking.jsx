@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Header from './Header';
+import { getUserInfo } from '../utils/auth';
 import './Booking.css';
 
 const Booking = () => {
@@ -14,6 +15,7 @@ const Booking = () => {
   const [showtimes, setShowtimes] = useState([]);
   const [seats, setSeats] = useState({});
   const [loading, setLoading] = useState(true);
+  const [systemSettings, setSystemSettings] = useState({});
 
   const [selectedTheater, setSelectedTheater] = useState(null);
   const [selectedShowtime, setSelectedShowtime] = useState(null);
@@ -118,11 +120,45 @@ const Booking = () => {
     fetchSeats();
   }, [selectedShowtime]);
 
+  // Fetch system settings for membership discounts
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get('http://localhost:8080/api/admin/settings', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const settings = {};
+        response.data.data.forEach(setting => {
+          settings[setting.settingKey] = parseFloat(setting.settingValue) || setting.settingValue;
+        });
+        setSystemSettings(settings);
+      } catch (error) {
+        console.error('Error fetching settings:', error);
+        // Set default values if fetch fails
+        setSystemSettings({
+          GOLD_DISCOUNT_PERCENT: 5,
+          PLATINUM_DISCOUNT_PERCENT: 10,
+          POINTS_PER_THOUSAND: 1,
+          MAX_TICKETS_PER_BOOKING: 10
+        });
+      }
+    };
+    fetchSettings();
+  }, []);
+
   const handleSeatClick = (seatId) => {
     const seatStatus = seats[seatId];
     if (seatStatus === 'OCCUPIED') return; // Không thể chọn ghế đã được đặt bởi người khác
 
     const isCurrentlySelected = localSelectedSeats[seatId];
+    const maxTickets = systemSettings.MAX_TICKETS_PER_BOOKING || 10;
+
+    // Kiểm tra số lượng vé tối đa khi chọn thêm ghế
+    if (!isCurrentlySelected && selectedSeats.length >= maxTickets) {
+      alert(`Bạn chỉ có thể đặt tối đa ${maxTickets} vé cho một lần đặt!`);
+      return;
+    }
 
     setLocalSelectedSeats(prev => {
       const newSeats = { ...prev };
@@ -153,9 +189,46 @@ const Booking = () => {
     return selectedSeats.length * (showtime.price || 0);
   };
 
+  const getOriginalPrice = () => {
+    return getTotalPrice();
+  };
+
+  const getMembershipDiscount = () => {
+    const userInfo = getUserInfo();
+    if (!userInfo || !userInfo.membershipLevel) return 0;
+
+    const originalPrice = getOriginalPrice();
+    if (originalPrice === 0) return 0;
+
+    let discountPercent = 0;
+    if (userInfo.membershipLevel === 'GOLD') {
+      discountPercent = systemSettings.GOLD_DISCOUNT_PERCENT || 5;
+    } else if (userInfo.membershipLevel === 'PLATINUM') {
+      discountPercent = systemSettings.PLATINUM_DISCOUNT_PERCENT || 10;
+    }
+
+    return Math.round(originalPrice * discountPercent / 100);
+  };
+
+  const getFinalPrice = () => {
+    return getOriginalPrice() - getMembershipDiscount();
+  };
+
+  const getMembershipPoints = () => {
+    const finalPrice = getFinalPrice();
+    const pointsPerThousand = systemSettings.POINTS_PER_THOUSAND || 1;
+    return Math.floor(finalPrice / 1000) * pointsPerThousand;
+  };
+
   const handleConfirm = () => {
     if (selectedSeats.length === 0) {
       alert('Vui lòng chọn ít nhất một ghế!');
+      return;
+    }
+
+    const maxTickets = systemSettings.MAX_TICKETS_PER_BOOKING || 10;
+    if (selectedSeats.length > maxTickets) {
+      alert(`Bạn chỉ có thể đặt tối đa ${maxTickets} vé cho một lần đặt!`);
       return;
     }
 
@@ -373,7 +446,21 @@ const Booking = () => {
               {selectedSeats.length > 0 && selectedShowtime && (
                 <>
                   <p><strong>Giá vé:</strong> {showtimes.find(s => s.id === selectedShowtime)?.price?.toLocaleString('vi-VN')}đ/vé</p>
-                  <p className="total-price"><strong>Tổng tiền:</strong> {getTotalPrice().toLocaleString('vi-VN')}đ</p>
+                  <p><strong>Tạm tính:</strong> {getOriginalPrice().toLocaleString('vi-VN')}đ</p>
+                  {getMembershipDiscount() > 0 && (
+                    <>
+                      <p style={{ color: '#4CAF50' }}>
+                        <strong>💎 Giảm giá hạng {getUserInfo()?.membershipLevel}:</strong> -{getMembershipDiscount().toLocaleString('vi-VN')}đ
+                        ({systemSettings.GOLD_DISCOUNT_PERCENT === undefined ? '...' : (getUserInfo()?.membershipLevel === 'GOLD' ? systemSettings.GOLD_DISCOUNT_PERCENT : systemSettings.PLATINUM_DISCOUNT_PERCENT)}%)
+                      </p>
+                    </>
+                  )}
+                  <p className="total-price"><strong>Tổng tiền:</strong> {getFinalPrice().toLocaleString('vi-VN')}đ</p>
+                  {getMembershipPoints() > 0 && (
+                    <p style={{ fontSize: '13px', color: '#666', fontStyle: 'italic' }}>
+                      ⭐ Bạn sẽ nhận {getMembershipPoints()} điểm thưởng
+                    </p>
+                  )}
                 </>
               )}
               {selectedSeats.length === 0 && (

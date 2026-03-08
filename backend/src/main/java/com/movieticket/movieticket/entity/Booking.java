@@ -57,6 +57,18 @@ public class Booking {
     @Column(name = "total_amount", precision = 15, scale = 2, nullable = false)
     private BigDecimal totalAmount;
 
+    @Column(name = "original_price", precision = 15, scale = 2)
+    private BigDecimal originalPrice;
+
+    @Column(name = "membership_discount_percent", precision = 5, scale = 2)
+    private BigDecimal membershipDiscountPercent;
+
+    @Column(name = "membership_discount_amount", precision = 15, scale = 2)
+    private BigDecimal membershipDiscountAmount;
+
+    @Column(name = "points_earned")
+    private Integer pointsEarned;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private BookingStatus status = BookingStatus.PURCHASED;

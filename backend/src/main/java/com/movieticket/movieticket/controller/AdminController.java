@@ -348,7 +348,7 @@ public class AdminController {
                             .avatar(user.getAvatar())
                             .role(user.getRole() != null ? user.getRole().name() : "USER")
                             .membershipLevel(
-                                    user.getMembershipLevel() != null ? user.getMembershipLevel().name() : "BRONZE")
+                                    user.getMembershipLevel() != null ? user.getMembershipLevel().name() : "-")
                             .points(user.getPoints() != null ? user.getPoints() : 0)
                             .accountBalance(
                                     user.getAccountBalance() != null ? user.getAccountBalance() : BigDecimal.ZERO)

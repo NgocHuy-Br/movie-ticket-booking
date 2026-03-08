@@ -7,7 +7,7 @@ import com.movieticket.movieticket.dto.BookingRequest;
 import com.movieticket.movieticket.entity.*;
 import com.movieticket.movieticket.repository.*;
 import com.movieticket.movieticket.service.BookingService;
-import com.movieticket.movieticket.service.SystemSettingsService;
+import com.movieticket.movieticket.service.SystemSettingService;
 import com.movieticket.movieticket.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -32,7 +32,7 @@ public class BookingServiceImpl implements BookingService {
     private final SeatRepository seatRepository;
     private final PaymentHistoryRepository paymentHistoryRepository;
     private final WalletService walletService;
-    private final SystemSettingsService systemSettingsService;
+    private final SystemSettingService systemSettingsService;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -45,6 +45,13 @@ public class BookingServiceImpl implements BookingService {
         // Lấy thông tin showtime
         Showtime showtime = showtimeRepository.findById(request.getShowtimeId())
                 .orElseThrow(() -> new RuntimeException("Showtime not found"));
+
+        // Validate số lượng vé tối đa
+        Integer maxTicketsPerBooking = systemSettingsService.getIntegerSetting("MAX_TICKETS_PER_BOOKING", 10);
+        if (request.getSeats().size() > maxTicketsPerBooking) {
+            throw new RuntimeException(
+                    "Bạn chỉ có thể đặt tối đa " + maxTicketsPerBooking + " vé cho một lần đặt!");
+        }
 
         // Kiểm tra và đặt ghế
         List<Seat> seatsToBook = new ArrayList<>();
@@ -65,8 +72,12 @@ public class BookingServiceImpl implements BookingService {
         int bookedSeats = request.getSeats().size();
         showtime.setAvailableSeats(showtime.getAvailableSeats() - bookedSeats);
 
-        // Tính tổng tiền
-        BigDecimal totalPrice = showtime.getPrice().multiply(BigDecimal.valueOf(bookedSeats));
+        // Tính tổng tiền gốc
+        BigDecimal originalPrice = showtime.getPrice().multiply(BigDecimal.valueOf(bookedSeats));
+
+        // Áp dụng giảm giá theo hạng thành viên
+        BigDecimal membershipDiscount = calculateMembershipDiscount(user, originalPrice);
+        BigDecimal totalPrice = originalPrice.subtract(membershipDiscount);
 
         // Kiểm tra số dư nếu thanh toán bằng tài khoản Movie
         if ("movie".equalsIgnoreCase(request.getPaymentMethod())
@@ -103,7 +114,25 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Failed to serialize seats", e);
         }
 
+        // Lưu thông tin giá và giảm giá
+        booking.setOriginalPrice(originalPrice);
+        booking.setMembershipDiscountAmount(membershipDiscount);
+
+        // Tính discount percent nếu có discount
+        if (membershipDiscount.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal discountPercent = membershipDiscount.multiply(BigDecimal.valueOf(100))
+                    .divide(originalPrice, 2, RoundingMode.HALF_UP);
+            booking.setMembershipDiscountPercent(discountPercent);
+        }
+
         booking.setTotalAmount(totalPrice);
+
+        // Tính điểm sẽ được tích lũy
+        Integer pointsPerThousand = systemSettingsService.getIntegerSetting("POINTS_PER_THOUSAND", 1);
+        int earnedPoints = totalPrice.divide(BigDecimal.valueOf(1000), RoundingMode.DOWN).intValue()
+                * pointsPerThousand;
+        booking.setPointsEarned(earnedPoints);
+
         booking.setStatus(Booking.BookingStatus.PURCHASED);
         booking.setCanCancel(true); // Có thể hủy trong 60 phút
 
@@ -138,6 +167,9 @@ public class BookingServiceImpl implements BookingService {
             walletService.createExternalPaymentTransaction(user.getId(), savedBooking.getId(), totalPrice,
                     paymentMethodName);
         }
+
+        // Tích điểm và cập nhật hạng thành viên
+        accumulatePointsAndUpdateMembership(user, totalPrice);
 
         return convertToDto(savedBooking);
     }
@@ -238,7 +270,7 @@ public class BookingServiceImpl implements BookingService {
         }
 
         // Lấy thời gian tối thiểu trước suất chiếu từ system settings (mặc định 48 giờ)
-        Integer minHoursBeforeShowtime = systemSettingsService.getIntValue("MIN_HOURS_BEFORE_CANCEL");
+        Integer minHoursBeforeShowtime = systemSettingsService.getIntegerSetting("MIN_HOURS_BEFORE_CANCEL", 48);
 
         // Kiểm tra thời gian hủy dựa vào suất chiếu
         LocalDateTime showtimeDateTime = LocalDateTime.of(booking.getShowDate(), booking.getShowTime());
@@ -276,7 +308,8 @@ public class BookingServiceImpl implements BookingService {
         showtimeRepository.save(showtime);
 
         // Lấy tỷ lệ hoàn tiền từ system settings (mặc định 80%)
-        BigDecimal refundPercentage = systemSettingsService.getDecimalValue("REFUND_PERCENTAGE");
+        Double refundPercentageValue = systemSettingsService.getDoubleSetting("REFUND_PERCENTAGE", 80.0);
+        BigDecimal refundPercentage = BigDecimal.valueOf(refundPercentageValue);
 
         // Tính số tiền hoàn lại
         BigDecimal refundAmount = booking.getTotalAmount()
@@ -317,6 +350,59 @@ public class BookingServiceImpl implements BookingService {
         bookingRepository.save(booking);
     }
 
+    /**
+     * Tính giảm giá dựa trên hạng thành viên
+     */
+    private BigDecimal calculateMembershipDiscount(User user, BigDecimal originalPrice) {
+        User.MembershipLevel membershipLevel = user.getMembershipLevel();
+        if (membershipLevel == null || membershipLevel == User.MembershipLevel.NORMAL) {
+            return BigDecimal.ZERO;
+        }
+
+        Double discountPercent = 0.0;
+        if (membershipLevel == User.MembershipLevel.GOLD) {
+            discountPercent = systemSettingsService.getDoubleSetting("GOLD_DISCOUNT_PERCENT", 5.0);
+        } else if (membershipLevel == User.MembershipLevel.PLATINUM) {
+            discountPercent = systemSettingsService.getDoubleSetting("PLATINUM_DISCOUNT_PERCENT", 10.0);
+        }
+
+        BigDecimal discount = originalPrice.multiply(BigDecimal.valueOf(discountPercent / 100.0));
+        return discount.setScale(0, RoundingMode.HALF_UP); // Làm tròn đến đồng
+    }
+
+    /**
+     * Tích điểm và cập nhật hạng thành viên
+     */
+    private void accumulatePointsAndUpdateMembership(User user, BigDecimal totalPrice) {
+        // Tính điểm tích lũy: mỗi 1000đ = X điểm (X lấy từ system settings)
+        Integer pointsPerThousand = systemSettingsService.getIntegerSetting("POINTS_PER_THOUSAND", 1);
+        int earnedPoints = totalPrice.divide(BigDecimal.valueOf(1000), RoundingMode.DOWN).intValue()
+                * pointsPerThousand;
+
+        // Cộng điểm vào user
+        Integer currentPoints = user.getPoints() != null ? user.getPoints() : 0;
+        user.setPoints(currentPoints + earnedPoints);
+
+        // Cập nhật hạng thành viên dựa trên tổng điểm
+        Integer goldThreshold = systemSettingsService.getIntegerSetting("GOLD_POINTS_THRESHOLD", 100);
+        Integer platinumThreshold = systemSettingsService.getIntegerSetting("PLATINUM_POINTS_THRESHOLD", 500);
+
+        User.MembershipLevel newLevel;
+        if (user.getPoints() >= platinumThreshold) {
+            newLevel = User.MembershipLevel.PLATINUM;
+        } else if (user.getPoints() >= goldThreshold) {
+            newLevel = User.MembershipLevel.GOLD;
+        } else {
+            newLevel = User.MembershipLevel.NORMAL;
+        }
+
+        user.setMembershipLevel(newLevel);
+        userRepository.save(user);
+
+        System.out.println(String.format("User %s earned %d points. Total: %d. New membership level: %s",
+                user.getUsername(), earnedPoints, user.getPoints(), newLevel));
+    }
+
     private String generateTicketCode() {
         String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         Random random = new Random();
@@ -352,7 +438,7 @@ public class BookingServiceImpl implements BookingService {
         boolean canCancel = booking.getCanCancel() && booking.getStatus() == Booking.BookingStatus.PURCHASED;
         if (canCancel) {
             try {
-                Integer minHoursBeforeShowtime = systemSettingsService.getIntValue("MIN_HOURS_BEFORE_CANCEL");
+                Integer minHoursBeforeShowtime = systemSettingsService.getIntegerSetting("MIN_HOURS_BEFORE_CANCEL", 48);
                 LocalDateTime showtimeDateTime = LocalDateTime.of(
                         booking.getShowtime().getShowDate(),
                         booking.getShowtime().getShowTime());
@@ -383,7 +469,11 @@ public class BookingServiceImpl implements BookingService {
                 .showTime(booking.getShowtime().getShowTime())
                 .seats(seatsList)
                 .numberOfSeats(seatsList.size())
+                .originalPrice(booking.getOriginalPrice())
+                .membershipDiscountPercent(booking.getMembershipDiscountPercent())
+                .membershipDiscountAmount(booking.getMembershipDiscountAmount())
                 .totalPrice(booking.getTotalAmount())
+                .pointsEarned(booking.getPointsEarned())
                 .status(booking.getStatus().name())
                 .canCancel(canCancel)
                 .bookingDate(booking.getCreatedAt())

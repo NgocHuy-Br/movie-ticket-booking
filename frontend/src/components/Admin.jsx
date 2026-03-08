@@ -2520,33 +2520,18 @@ const Admin = () => {
                                                     <td>{user.email || '-'}</td>
                                                     <td>{user.phone}</td>
                                                     <td>
-                                                        <select
-                                                            value={user.role}
-                                                            onChange={(e) => {
-                                                                if (window.confirm(`Bạn có chắc muốn đổi quyền của ${user.name} thành ${e.target.value}?`)) {
-                                                                    updateUserRole(user.id, e.target.value);
-                                                                }
-                                                            }}
-                                                            className={`role-select role-${user.role}`}
-                                                        >
-                                                            <option value="USER">USER</option>
-                                                            <option value="ADMIN">ADMIN</option>
-                                                        </select>
+                                                        <span className={`role-badge role-${user.role}`}>
+                                                            {user.role}
+                                                        </span>
                                                     </td>
                                                     <td>
-                                                        <select
-                                                            value={user.membershipLevel}
-                                                            onChange={(e) => {
-                                                                if (window.confirm(`Bạn có chắc muốn đổi hạng của ${user.name} thành ${e.target.value}?`)) {
-                                                                    updateUserMembership(user.id, e.target.value);
-                                                                }
-                                                            }}
-                                                            className={`membership-select membership-${user.membershipLevel}`}
-                                                        >
-                                                            <option value="NORMAL">NORMAL</option>
-                                                            <option value="GOLD">GOLD</option>
-                                                            <option value="PLATINUM">PLATINUM</option>
-                                                        </select>
+                                                        {user.membershipLevel === '-' ? (
+                                                            <span style={{ color: '#999' }}>-</span>
+                                                        ) : (
+                                                            <span className={`membership-badge membership-${user.membershipLevel}`}>
+                                                                {user.membershipLevel}
+                                                            </span>
+                                                        )}
                                                     </td>
                                                     <td>{user.points || 0}</td>
                                                     <td>{(user.accountBalance || 0).toLocaleString('vi-VN')}₫</td>
@@ -2924,6 +2909,83 @@ const Admin = () => {
                                             max={60}
                                         />
                                         <span className="hint">phút (Thời gian dọn dẹp phòng)</span>
+                                    </div>
+                                </div>
+
+                                <div className="settings-section">
+                                    <h3>💎 Chương trình Thành viên</h3>
+                                    <p className="settings-note">
+                                        Cấu hình hệ thống tích điểm và giảm giá cho các hạng thành viên
+                                    </p>
+
+                                    <div className="setting-item">
+                                        <label>Tích điểm:</label>
+                                        <input
+                                            type="number"
+                                            value={settings.POINTS_PER_THOUSAND || 1}
+                                            onChange={(e) => handleSettingChange('POINTS_PER_THOUSAND', e.target.value)}
+                                            min={1}
+                                            max={10}
+                                        />
+                                        <span className="hint">điểm cho mỗi 1.000đ chi tiêu</span>
+                                    </div>
+
+                                    <div className="setting-item">
+                                        <label>Điểm đạt hạng Gold:</label>
+                                        <input
+                                            type="number"
+                                            value={settings.GOLD_POINTS_THRESHOLD || 100}
+                                            onChange={(e) => handleSettingChange('GOLD_POINTS_THRESHOLD', e.target.value)}
+                                            min={10}
+                                            max={10000}
+                                        />
+                                        <span className="hint">điểm</span>
+                                    </div>
+
+                                    <div className="setting-item">
+                                        <label>Giảm giá hạng Gold:</label>
+                                        <input
+                                            type="number"
+                                            value={settings.GOLD_DISCOUNT_PERCENT || 5}
+                                            onChange={(e) => handleSettingChange('GOLD_DISCOUNT_PERCENT', e.target.value)}
+                                            min={0}
+                                            max={50}
+                                            step={0.5}
+                                        />
+                                        <span className="hint">%</span>
+                                    </div>
+
+                                    <div className="setting-item">
+                                        <label>Điểm đạt hạng Platinum:</label>
+                                        <input
+                                            type="number"
+                                            value={settings.PLATINUM_POINTS_THRESHOLD || 500}
+                                            onChange={(e) => handleSettingChange('PLATINUM_POINTS_THRESHOLD', e.target.value)}
+                                            min={10}
+                                            max={10000}
+                                        />
+                                        <span className="hint">điểm</span>
+                                    </div>
+
+                                    <div className="setting-item">
+                                        <label>Giảm giá hạng Platinum:</label>
+                                        <input
+                                            type="number"
+                                            value={settings.PLATINUM_DISCOUNT_PERCENT || 10}
+                                            onChange={(e) => handleSettingChange('PLATINUM_DISCOUNT_PERCENT', e.target.value)}
+                                            min={0}
+                                            max={50}
+                                            step={0.5}
+                                        />
+                                        <span className="hint">%</span>
+                                    </div>
+
+                                    <div className="calculated-result">
+                                        <strong>
+                                            → Mỗi 1.000đ = {settings.POINTS_PER_THOUSAND || 1} điểm |
+                                            Gold ({settings.GOLD_POINTS_THRESHOLD || 100} điểm): -{settings.GOLD_DISCOUNT_PERCENT || 5}% |
+                                            Platinum ({settings.PLATINUM_POINTS_THRESHOLD || 500} điểm): -{settings.PLATINUM_DISCOUNT_PERCENT || 10}%
+                                        </strong>
                                     </div>
                                 </div>
 
