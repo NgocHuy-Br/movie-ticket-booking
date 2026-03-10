@@ -32,4 +32,7 @@ public interface MovieService {
     void updateAllMovieStatuses();
 
     void updateMovieStatus(Long movieId);
+
+    // Update movie release date based on earliest showtime
+    void updateMovieReleaseDate(Long movieId);
 }

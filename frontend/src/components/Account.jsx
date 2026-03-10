@@ -5,6 +5,7 @@ import MyMovies from './MyMovies';
 import MyWallet from './MyWallet';
 import Notification from './Notification';
 import { getUserInfo, updateUserInfo } from '../utils/auth';
+import { getMembershipLabel } from '../utils/membershipUtils';
 import './Account.css';
 
 const Account = () => {
@@ -467,7 +468,7 @@ const Account = () => {
                       <div className="info-item">
                         <span className="label">Hạng thành viên:</span>
                         <span className={`value membership-badge ${userInfo.membershipLevel.toLowerCase()}`}>
-                          {userInfo.membershipLevel}
+                          {getMembershipLabel(userInfo.membershipLevel)}
                         </span>
                       </div>
                     )}

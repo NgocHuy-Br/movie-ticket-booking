@@ -4,6 +4,21 @@ import Header from './Header';
 import { getUserInfo, getAuthHeaders } from '../utils/auth';
 import './Admin.css';
 
+// Danh sách 63 tỉnh thành Việt Nam
+const VIETNAM_PROVINCES = [
+    'An Giang', 'Bà Rịa - Vũng Tàu', 'Bắc Giang', 'Bắc Kạn', 'Bạc Liêu', 'Bắc Ninh',
+    'Bến Tre', 'Bình Định', 'Bình Dương', 'Bình Phước', 'Bình Thuận', 'Cà Mau',
+    'Cần Thơ', 'Cao Bằng', 'Đà Nẵng', 'Đắk Lắk', 'Đắk Nông', 'Điện Biên',
+    'Đồng Nai', 'Đồng Tháp', 'Gia Lai', 'Hà Giang', 'Hà Nam', 'Hà Nội',
+    'Hà Tĩnh', 'Hải Dương', 'Hải Phòng', 'Hậu Giang', 'Hòa Bình', 'Hưng Yên',
+    'Khánh Hòa', 'Kiên Giang', 'Kon Tum', 'Lai Châu', 'Lâm Đồng', 'Lạng Sơn',
+    'Lào Cai', 'Long An', 'Nam Định', 'Nghệ An', 'Ninh Bình', 'Ninh Thuận',
+    'Phú Thọ', 'Phú Yên', 'Quảng Bình', 'Quảng Nam', 'Quảng Ngãi', 'Quảng Ninh',
+    'Quảng Trị', 'Sóc Trăng', 'Sơn La', 'Tây Ninh', 'Thái Bình', 'Thái Nguyên',
+    'Thanh Hóa', 'Thừa Thiên Huế', 'Tiền Giang', 'TP. Hồ Chí Minh', 'Trà Vinh',
+    'Tuyên Quang', 'Vĩnh Long', 'Vĩnh Phúc', 'Yên Bái'
+];
+
 const Admin = () => {
     const navigate = useNavigate();
     const [userInfo, setUserInfo] = useState(null);
@@ -116,6 +131,15 @@ const Admin = () => {
     const [bookingSortOrder, setBookingSortOrder] = useState('asc');
     const [bookingTheaterFilter, setBookingTheaterFilter] = useState('');
 
+    // Pagination states
+    const [movieCurrentPage, setMovieCurrentPage] = useState(0);
+    const [theaterCurrentPage, setTheaterCurrentPage] = useState(0);
+    const [roomCurrentPage, setRoomCurrentPage] = useState(0);
+    const [showtimeCurrentPage, setShowtimeCurrentPage] = useState(0);
+    const [userCurrentPage, setUserCurrentPage] = useState(0);
+    const [bookingCurrentPage, setBookingCurrentPage] = useState(0);
+    const itemsPerPage = 10;
+
     useEffect(() => {
         const user = getUserInfo();
         if (!user || user.role !== 'ADMIN') {
@@ -156,6 +180,31 @@ const Admin = () => {
     useEffect(() => {
         console.log('📊 Users state changed. Count:', users.length, 'Users:', users);
     }, [users]);
+
+    // Reset pagination when filters change
+    useEffect(() => {
+        setMovieCurrentPage(0);
+    }, [movieGenreFilter, movieSearch]);
+
+    useEffect(() => {
+        setTheaterCurrentPage(0);
+    }, [theaterCityFilter, theaterSearch]);
+
+    useEffect(() => {
+        setRoomCurrentPage(0);
+    }, [roomTheaterFilter]);
+
+    useEffect(() => {
+        setShowtimeCurrentPage(0);
+    }, [showtimeTheaterFilter, showtimeSearch]);
+
+    useEffect(() => {
+        setUserCurrentPage(0);
+    }, [userRoleFilter, userSearch]);
+
+    useEffect(() => {
+        setBookingCurrentPage(0);
+    }, [bookingTheaterFilter, bookingSearch]);
 
     const fetchMovies = async () => {
         try {
@@ -570,49 +619,6 @@ const Admin = () => {
         } catch (error) {
             console.error('Failed to delete theater:', error);
             alert('❌ Không thể xóa rạp!');
-        }
-    };
-
-    const migrateCinemaRooms = async () => {
-        const confirmMessage =
-            '⚠️ CẢNH BÁO: Hành động này sẽ:\n\n' +
-            '❌ XÓA TẤT CẢ SUẤT CHIẾU hiện tại\n' +
-            '❌ XÓA TẤT CẢ PHÒNG CHIẾU hiện tại\n' +
-            '✅ TẠO LẠI phòng theo format: "Phòng 01, 02,..."\n' +
-            '✅ Mỗi phòng: 10 hàng × 8 cột = 80 ghế\n\n' +
-            'Bạn có chắc chắn muốn tiếp tục?';
-
-        if (!window.confirm(confirmMessage)) {
-            return;
-        }
-
-        try {
-            const response = await fetch('http://localhost:8080/api/admin/migrate-cinema-rooms', {
-                method: 'POST',
-                headers: getAuthHeaders()
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                const result = data.data;
-                alert(
-                    '✅ MIGRATION THÀNH CÔNG!\n\n' +
-                    `📊 Thống kê:\n` +
-                    `• Đã xóa ${result.deletedShowtimes} suất chiếu\n` +
-                    `• Đã xóa ${result.deletedRooms} phòng cũ\n` +
-                    `• Đã tạo ${result.createdRooms} phòng mới cho ${result.theaters} rạp\n\n` +
-                    `🎉 Tất cả phòng giờ có format chuẩn với 80 ghế!`
-                );
-                // Reload data
-                await fetchTheaters();
-                await fetchShowtimes();
-            } else {
-                alert('❌ Lỗi: ' + data.message);
-            }
-        } catch (error) {
-            console.error('Failed to migrate cinema rooms:', error);
-            alert('❌ Không thể thực hiện migration!');
         }
     };
 
@@ -1447,19 +1453,20 @@ const Admin = () => {
             return;
         }
 
-        // Validate date is not in the past
-        const selectedDate = new Date(showtimeForm.showDate);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (selectedDate < today) {
-            alert('Ngày chiếu không được trong quá khứ!');
-            return;
-        }
-
+        // Validate date and time are not in the past
         if (!showtimeForm.showTime) {
             alert('Vui lòng chọn giờ chiếu!');
             return;
         }
+
+        const selectedDateTime = new Date(`${showtimeForm.showDate}T${showtimeForm.showTime}`);
+        const now = new Date();
+
+        if (selectedDateTime <= now) {
+            alert('Ngày và giờ chiếu phải sau thời điểm hiện tại!');
+            return;
+        }
+
         const priceValue = parseFloat(showtimeForm.price.replace(/,/g, ''));
         if (!priceValue || priceValue < 10000) {
             alert('Giá vé phải từ 10,000 VNĐ trở lên!');
@@ -1654,6 +1661,185 @@ const Admin = () => {
 
         return filtered;
     })();
+
+    // ===== Pagination Helper Functions =====
+    const getPaginatedMovies = () => {
+        const filtered = getFilteredAndSortedMovies();
+        const startIndex = movieCurrentPage * itemsPerPage;
+        return filtered.slice(startIndex, startIndex + itemsPerPage);
+    };
+
+    const getPaginatedTheaters = () => {
+        const filtered = getFilteredAndSortedTheaters();
+        const startIndex = theaterCurrentPage * itemsPerPage;
+        return filtered.slice(startIndex, startIndex + itemsPerPage);
+    };
+
+    const getPaginatedRooms = () => {
+        const startIndex = roomCurrentPage * itemsPerPage;
+        return filteredRooms.slice(startIndex, startIndex + itemsPerPage);
+    };
+
+    const getPaginatedShowtimes = () => {
+        const filtered = getFilteredAndSortedShowtimes();
+        const startIndex = showtimeCurrentPage * itemsPerPage;
+        return filtered.slice(startIndex, startIndex + itemsPerPage);
+    };
+
+    const getPaginatedUsers = () => {
+        const filtered = getFilteredAndSortedUsers();
+        const startIndex = userCurrentPage * itemsPerPage;
+        return filtered.slice(startIndex, startIndex + itemsPerPage);
+    };
+
+    const getPaginatedBookings = () => {
+        const filtered = getFilteredAndSortedBookings();
+        const startIndex = bookingCurrentPage * itemsPerPage;
+        return filtered.slice(startIndex, startIndex + itemsPerPage);
+    };
+
+    // Pagination component
+    const Pagination = ({ currentPage, setCurrentPage, totalItems, itemsPerPage }) => {
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+        if (totalPages <= 1) return null;
+
+        const handlePageChange = (page) => {
+            if (page >= 0 && page < totalPages) {
+                setCurrentPage(page);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        };
+
+        const getPageNumbers = () => {
+            const pages = [];
+            const maxPagesToShow = 5;
+
+            if (totalPages <= maxPagesToShow) {
+                for (let i = 0; i < totalPages; i++) {
+                    pages.push(i);
+                }
+            } else {
+                if (currentPage <= 2) {
+                    for (let i = 0; i < 4; i++) pages.push(i);
+                    pages.push('...');
+                    pages.push(totalPages - 1);
+                } else if (currentPage >= totalPages - 3) {
+                    pages.push(0);
+                    pages.push('...');
+                    for (let i = totalPages - 4; i < totalPages; i++) pages.push(i);
+                } else {
+                    pages.push(0);
+                    pages.push('...');
+                    for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+                    pages.push('...');
+                    pages.push(totalPages - 1);
+                }
+            }
+
+            return pages;
+        };
+
+        return (
+            <div style={{ textAlign: 'center', marginTop: '20px' }}>
+                <div className="pagination" style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '10px',
+                    borderRadius: '8px',
+                    background: '#f8f9fa'
+                }}>
+                    <button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 0}
+                        style={{
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            background: currentPage === 0 ? 'transparent' : '#fff',
+                            cursor: currentPage === 0 ? 'not-allowed' : 'pointer',
+                            color: currentPage === 0 ? '#ccc' : '#495057',
+                            fontSize: '16px',
+                            fontWeight: '600',
+                            transition: 'all 0.2s',
+                            boxShadow: currentPage === 0 ? 'none' : '0 1px 2px rgba(0,0,0,0.1)'
+                        }}
+                        title="Trang trước"
+                    >
+                        ‹
+                    </button>
+
+                    {getPageNumbers().map((page, index) => (
+                        page === '...' ? (
+                            <span key={`ellipsis-${index}`} style={{
+                                padding: '0 4px',
+                                color: '#6c757d',
+                                fontSize: '14px'
+                            }}>...</span>
+                        ) : (
+                            <button
+                                key={page}
+                                onClick={() => handlePageChange(page)}
+                                style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '6px',
+                                    border: 'none',
+                                    background: currentPage === page ? '#007bff' : '#fff',
+                                    color: currentPage === page ? '#fff' : '#495057',
+                                    cursor: 'pointer',
+                                    fontWeight: currentPage === page ? '600' : '500',
+                                    minWidth: '36px',
+                                    fontSize: '14px',
+                                    transition: 'all 0.2s',
+                                    boxShadow: currentPage === page ? '0 2px 4px rgba(0,123,255,0.3)' : '0 1px 2px rgba(0,0,0,0.1)'
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (currentPage !== page) {
+                                        e.target.style.background = '#e9ecef';
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (currentPage !== page) {
+                                        e.target.style.background = '#fff';
+                                    }
+                                }}
+                            >
+                                {page + 1}
+                            </button>
+                        )
+                    ))}
+
+                    <button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages - 1}
+                        style={{
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            background: currentPage === totalPages - 1 ? 'transparent' : '#fff',
+                            cursor: currentPage === totalPages - 1 ? 'not-allowed' : 'pointer',
+                            color: currentPage === totalPages - 1 ? '#ccc' : '#495057',
+                            fontSize: '16px',
+                            fontWeight: '600',
+                            transition: 'all 0.2s',
+                            boxShadow: currentPage === totalPages - 1 ? 'none' : '0 1px 2px rgba(0,0,0,0.1)'
+                        }}
+                        title="Trang sau"
+                    >
+                        ›
+                    </button>
+                </div>
+                <div style={{
+                    marginTop: '8px',
+                    color: '#6c757d',
+                    fontSize: '13px'
+                }}>
+                    Hiển thị trang {currentPage + 1} / {totalPages} · Tổng {totalItems} mục
+                </div>
+            </div>
+        );
+    };
 
     if (loading) {
         return (
@@ -1862,9 +2048,9 @@ const Admin = () => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {getFilteredAndSortedMovies().map((movie, index) => (
+                                            {getPaginatedMovies().map((movie, index) => (
                                                 <tr key={movie.id}>
-                                                    <td>{index + 1}</td>
+                                                    <td>{(movieCurrentPage * itemsPerPage) + index + 1}</td>
                                                     <td>
                                                         <strong>{movie.title}</strong>
                                                         {movie.imageUrl && (
@@ -1930,6 +2116,12 @@ const Admin = () => {
                                             ))}
                                         </tbody>
                                     </table>
+                                    <Pagination
+                                        currentPage={movieCurrentPage}
+                                        setCurrentPage={setMovieCurrentPage}
+                                        totalItems={getFilteredAndSortedMovies().length}
+                                        itemsPerPage={itemsPerPage}
+                                    />
                                 </div>
                             )}
                         </div>
@@ -1939,28 +2131,13 @@ const Admin = () => {
                         <div className="content-section">
                             <div className="section-header">
                                 <h2>🏢 Quản lý Rạp</h2>
-                                <div style={{ display: 'flex', gap: '10px' }}>
-                                    <button
-                                        className="add-btn"
-                                        onClick={migrateCinemaRooms}
-                                        style={{
-                                            width: 'auto',
-                                            padding: '10px 20px',
-                                            backgroundColor: '#ff9800',
-                                            fontSize: '0.9em'
-                                        }}
-                                        title="Xóa tất cả phòng cũ và tạo lại theo format chuẩn"
-                                    >
-                                        🔄 Chuẩn hóa phòng
-                                    </button>
-                                    <button
-                                        className="add-btn"
-                                        onClick={openAddTheaterModal}
-                                        style={{ width: 'auto', padding: '10px 35px' }}
-                                    >
-                                        + Thêm
-                                    </button>
-                                </div>
+                                <button
+                                    className="add-btn"
+                                    onClick={openAddTheaterModal}
+                                    style={{ width: 'auto', padding: '10px 35px' }}
+                                >
+                                    + Thêm
+                                </button>
                             </div>
 
                             <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', alignItems: 'center' }}>
@@ -1976,9 +2153,9 @@ const Admin = () => {
                                         minWidth: '200px'
                                     }}
                                 >
-                                    <option value="">🏙️ Tất cả thành phố</option>
-                                    {getUniqueCities().map(city => (
-                                        <option key={city} value={city}>{city}</option>
+                                    <option value="">🏙️ Tất cả tỉnh, thành phố</option>
+                                    {VIETNAM_PROVINCES.map(province => (
+                                        <option key={province} value={province}>{province}</option>
                                     ))}
                                 </select>
 
@@ -2043,7 +2220,7 @@ const Admin = () => {
                                                     onClick={() => handleTheaterSort('city')}
                                                     style={{ cursor: 'pointer', userSelect: 'none' }}
                                                 >
-                                                    Thành phố {theaterSortField === 'city' ? (theaterSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                    Tỉnh, Thành phố {theaterSortField === 'city' ? (theaterSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
                                                 </th>
                                                 <th
                                                     onClick={() => handleTheaterSort('address')}
@@ -2062,9 +2239,9 @@ const Admin = () => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {getFilteredAndSortedTheaters().map((theater, index) => (
+                                            {getPaginatedTheaters().map((theater, index) => (
                                                 <tr key={theater.id}>
-                                                    <td>{index + 1}</td>
+                                                    <td>{(theaterCurrentPage * itemsPerPage) + index + 1}</td>
                                                     <td><strong>{theater.name}</strong></td>
                                                     <td>{theater.city || '-'}</td>
                                                     <td>{theater.address || '-'}</td>
@@ -2088,6 +2265,12 @@ const Admin = () => {
                                             ))}
                                         </tbody>
                                     </table>
+                                    <Pagination
+                                        currentPage={theaterCurrentPage}
+                                        setCurrentPage={setTheaterCurrentPage}
+                                        totalItems={getFilteredAndSortedTheaters().length}
+                                        itemsPerPage={itemsPerPage}
+                                    />
                                 </div>
                             )}
                         </div>
@@ -2154,7 +2337,7 @@ const Admin = () => {
                                                     onClick={() => handleRoomSort('city')}
                                                     style={{ cursor: 'pointer', userSelect: 'none' }}
                                                 >
-                                                    Thành phố {roomSortField === 'city' ? (roomSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
+                                                    Tỉnh, Thành phố {roomSortField === 'city' ? (roomSortOrder === 'asc' ? '↑' : '↓') : <span style={{ letterSpacing: '-2px' }}>↑↓</span>}
                                                 </th>
                                                 <th
                                                     onClick={() => handleRoomSort('totalRows')}
@@ -2178,9 +2361,9 @@ const Admin = () => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {filteredRooms.map((room, index) => (
+                                            {getPaginatedRooms().map((room, index) => (
                                                 <tr key={room.id}>
-                                                    <td>{index + 1}</td>
+                                                    <td>{(roomCurrentPage * itemsPerPage) + index + 1}</td>
                                                     <td><strong>{room.name}</strong></td>
                                                     <td>{room.theaterName}</td>
                                                     <td>
@@ -2219,6 +2402,12 @@ const Admin = () => {
                                             ))}
                                         </tbody>
                                     </table>
+                                    <Pagination
+                                        currentPage={roomCurrentPage}
+                                        setCurrentPage={setRoomCurrentPage}
+                                        totalItems={filteredRooms.length}
+                                        itemsPerPage={itemsPerPage}
+                                    />
                                 </div>
                             )}
                         </div>
@@ -2374,9 +2563,9 @@ const Admin = () => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {getFilteredAndSortedShowtimes().map((showtime, index) => (
+                                            {getPaginatedShowtimes().map((showtime, index) => (
                                                 <tr key={showtime.id}>
-                                                    <td>{index + 1}</td>
+                                                    <td>{(showtimeCurrentPage * itemsPerPage) + index + 1}</td>
                                                     <td><strong>{showtime.movieTitle || 'N/A'}</strong></td>
                                                     <td>{showtime.theaterName || 'N/A'}</td>
                                                     <td>{showtime.roomName || 'N/A'}</td>
@@ -2412,6 +2601,12 @@ const Admin = () => {
                                             ))}
                                         </tbody>
                                     </table>
+                                    <Pagination
+                                        currentPage={showtimeCurrentPage}
+                                        setCurrentPage={setShowtimeCurrentPage}
+                                        totalItems={getFilteredAndSortedShowtimes().length}
+                                        itemsPerPage={itemsPerPage}
+                                    />
                                 </div>
                             )}
                         </div>
@@ -2522,9 +2717,9 @@ const Admin = () => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {getFilteredAndSortedUsers().map((user, index) => (
+                                            {getPaginatedUsers().map((user, index) => (
                                                 <tr key={user.id}>
-                                                    <td>{index + 1}</td>
+                                                    <td>{(userCurrentPage * itemsPerPage) + index + 1}</td>
                                                     <td><strong>{user.name}</strong></td>
                                                     <td>{user.username}</td>
                                                     <td>{user.email || '-'}</td>
@@ -2550,6 +2745,12 @@ const Admin = () => {
                                             ))}
                                         </tbody>
                                     </table>
+                                    <Pagination
+                                        currentPage={userCurrentPage}
+                                        setCurrentPage={setUserCurrentPage}
+                                        totalItems={getFilteredAndSortedUsers().length}
+                                        itemsPerPage={itemsPerPage}
+                                    />
                                 </div>
                             )}
                         </div>
@@ -2702,9 +2903,9 @@ const Admin = () => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {getFilteredAndSortedBookings().map((booking, index) => (
+                                            {getPaginatedBookings().map((booking, index) => (
                                                 <tr key={booking.id}>
-                                                    <td>{index + 1}</td>
+                                                    <td>{(bookingCurrentPage * itemsPerPage) + index + 1}</td>
                                                     <td><strong>{booking.ticketCode}</strong></td>
                                                     <td>{booking.userName}</td>
                                                     <td>{booking.movieTitle}</td>
@@ -2725,6 +2926,12 @@ const Admin = () => {
                                             ))}
                                         </tbody>
                                     </table>
+                                    <Pagination
+                                        currentPage={bookingCurrentPage}
+                                        setCurrentPage={setBookingCurrentPage}
+                                        totalItems={getFilteredAndSortedBookings().length}
+                                        itemsPerPage={itemsPerPage}
+                                    />
                                 </div>
                             )}
                         </div>
@@ -2892,18 +3099,6 @@ const Admin = () => {
                                         />
                                         <span className="hint">vé</span>
                                     </div>
-
-                                    <div className="setting-item">
-                                        <label>Thời gian giữ ghế:</label>
-                                        <input
-                                            type="number"
-                                            value={settings.SEAT_HOLD_MINUTES}
-                                            onChange={(e) => handleSettingChange('SEAT_HOLD_MINUTES', e.target.value)}
-                                            min={5}
-                                            max={30}
-                                        />
-                                        <span className="hint">phút (Timeout khi khách đang đặt vé)</span>
-                                    </div>
                                 </div>
 
                                 <div className="settings-section">
@@ -2941,7 +3136,7 @@ const Admin = () => {
                                     </div>
 
                                     <div className="setting-item">
-                                        <label>Điểm đạt hạng Gold:</label>
+                                        <label>Điểm đạt hạng Vàng:</label>
                                         <input
                                             type="number"
                                             value={settings.GOLD_POINTS_THRESHOLD || 100}
@@ -2953,7 +3148,7 @@ const Admin = () => {
                                     </div>
 
                                     <div className="setting-item">
-                                        <label>Giảm giá hạng Gold:</label>
+                                        <label>Giảm giá hạng Vàng:</label>
                                         <input
                                             type="number"
                                             value={settings.GOLD_DISCOUNT_PERCENT || 5}
@@ -2966,7 +3161,7 @@ const Admin = () => {
                                     </div>
 
                                     <div className="setting-item">
-                                        <label>Điểm đạt hạng Platinum:</label>
+                                        <label>Điểm đạt hạng Bạch kim:</label>
                                         <input
                                             type="number"
                                             value={settings.PLATINUM_POINTS_THRESHOLD || 500}
@@ -2978,7 +3173,7 @@ const Admin = () => {
                                     </div>
 
                                     <div className="setting-item">
-                                        <label>Giảm giá hạng Platinum:</label>
+                                        <label>Giảm giá hạng Bạch kim:</label>
                                         <input
                                             type="number"
                                             value={settings.PLATINUM_DISCOUNT_PERCENT || 10}
@@ -2993,8 +3188,8 @@ const Admin = () => {
                                     <div className="calculated-result">
                                         <strong>
                                             → Mỗi 1.000đ = {settings.POINTS_PER_THOUSAND || 1} điểm |
-                                            Gold ({settings.GOLD_POINTS_THRESHOLD || 100} điểm): -{settings.GOLD_DISCOUNT_PERCENT || 5}% |
-                                            Platinum ({settings.PLATINUM_POINTS_THRESHOLD || 500} điểm): -{settings.PLATINUM_DISCOUNT_PERCENT || 10}%
+                                            Vàng ({settings.GOLD_POINTS_THRESHOLD || 100} điểm): -{settings.GOLD_DISCOUNT_PERCENT || 5}% |
+                                            Bạch kim ({settings.PLATINUM_POINTS_THRESHOLD || 500} điểm): -{settings.PLATINUM_DISCOUNT_PERCENT || 10}%
                                         </strong>
                                     </div>
                                 </div>
@@ -3086,14 +3281,24 @@ const Admin = () => {
                             </div>
 
                             <div className="form-group">
-                                <label>Thành phố</label>
-                                <input
-                                    type="text"
+                                <label>Tỉnh, Thành phố</label>
+                                <select
                                     name="city"
                                     value={theaterForm.city}
                                     onChange={handleTheaterFormChange}
-                                    placeholder="VD: Hà Nội"
-                                />
+                                    style={{
+                                        width: '100%',
+                                        padding: '8px',
+                                        border: '1px solid #ddd',
+                                        borderRadius: '4px',
+                                        fontSize: '14px'
+                                    }}
+                                >
+                                    <option value="">-- Chọn tỉnh, thành phố --</option>
+                                    {VIETNAM_PROVINCES.map(province => (
+                                        <option key={province} value={province}>{province}</option>
+                                    ))}
+                                </select>
                             </div>
 
                             <div className="form-group">
@@ -3131,64 +3336,66 @@ const Admin = () => {
                                 />
                             </div>
 
-                            <div style={{
-                                background: '#fff3e0',
-                                border: '1px solid #ffb74d',
-                                borderRadius: '8px',
-                                padding: '16px',
-                                marginTop: '16px'
-                            }}>
-                                <h4 style={{ margin: '0 0 12px 0', color: '#f57c00', fontSize: '1em' }}>
-                                    🎫 Cấu hình số ghế mặc định cho tất cả phòng
-                                </h4>
-                                <p style={{ fontSize: '0.9em', color: '#666', margin: '0 0 12px 0' }}>
-                                    Khi tạo rạp, tất cả phòng sẽ có cùng số ghế. Bạn có thể tùy chỉnh từng phòng sau.
-                                </p>
-
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                    <div className="form-group" style={{ margin: 0 }}>
-                                        <label>Số hàng ghế <span className="required">*</span></label>
-                                        <input
-                                            type="number"
-                                            name="defaultRows"
-                                            value={theaterForm.defaultRows}
-                                            onChange={handleTheaterFormChange}
-                                            min={1}
-                                            max={20}
-                                            required
-                                            style={{ width: '100%' }}
-                                        />
-                                    </div>
-                                    <div className="form-group" style={{ margin: 0 }}>
-                                        <label>Số ghế mỗi hàng <span className="required">*</span></label>
-                                        <input
-                                            type="number"
-                                            name="defaultCols"
-                                            value={theaterForm.defaultCols}
-                                            onChange={handleTheaterFormChange}
-                                            min={1}
-                                            max={20}
-                                            required
-                                            style={{ width: '100%' }}
-                                        />
-                                    </div>
-                                </div>
-
+                            {!isEditMode && (
                                 <div style={{
-                                    marginTop: '12px',
-                                    padding: '8px 12px',
-                                    background: '#fff',
-                                    borderRadius: '6px',
-                                    fontSize: '0.9em',
-                                    color: '#333'
+                                    background: '#fff3e0',
+                                    border: '1px solid #ffb74d',
+                                    borderRadius: '8px',
+                                    padding: '16px',
+                                    marginTop: '16px'
                                 }}>
-                                    <strong>📊 Tổng số ghế mỗi phòng:</strong>{' '}
-                                    <span style={{ color: '#f57c00', fontWeight: 'bold', fontSize: '1.1em' }}>
-                                        {theaterForm.defaultRows * theaterForm.defaultCols} ghế
-                                    </span>
-                                    {' '}({theaterForm.defaultRows} hàng × {theaterForm.defaultCols} ghế)
+                                    <h4 style={{ margin: '0 0 12px 0', color: '#f57c00', fontSize: '1em' }}>
+                                        🎫 Cấu hình số ghế mặc định cho tất cả phòng
+                                    </h4>
+                                    <p style={{ fontSize: '0.9em', color: '#666', margin: '0 0 12px 0' }}>
+                                        Khi tạo rạp, tất cả phòng sẽ có cùng số ghế. Bạn có thể tùy chỉnh từng phòng sau.
+                                    </p>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                        <div className="form-group" style={{ margin: 0 }}>
+                                            <label>Số hàng ghế <span className="required">*</span></label>
+                                            <input
+                                                type="number"
+                                                name="defaultRows"
+                                                value={theaterForm.defaultRows}
+                                                onChange={handleTheaterFormChange}
+                                                min={1}
+                                                max={20}
+                                                required
+                                                style={{ width: '100%' }}
+                                            />
+                                        </div>
+                                        <div className="form-group" style={{ margin: 0 }}>
+                                            <label>Số ghế mỗi hàng <span className="required">*</span></label>
+                                            <input
+                                                type="number"
+                                                name="defaultCols"
+                                                value={theaterForm.defaultCols}
+                                                onChange={handleTheaterFormChange}
+                                                min={1}
+                                                max={20}
+                                                required
+                                                style={{ width: '100%' }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div style={{
+                                        marginTop: '12px',
+                                        padding: '8px 12px',
+                                        background: '#fff',
+                                        borderRadius: '6px',
+                                        fontSize: '0.9em',
+                                        color: '#333'
+                                    }}>
+                                        <strong>📊 Tổng số ghế mỗi phòng:</strong>{' '}
+                                        <span style={{ color: '#f57c00', fontWeight: 'bold', fontSize: '1.1em' }}>
+                                            {theaterForm.defaultRows * theaterForm.defaultCols} ghế
+                                        </span>
+                                        {' '}({theaterForm.defaultRows} hàng × {theaterForm.defaultCols} ghế)
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
                             <div style={{
                                 background: '#e8f5e9',

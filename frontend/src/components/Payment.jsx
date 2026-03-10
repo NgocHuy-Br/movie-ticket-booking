@@ -437,7 +437,7 @@ const Payment = () => {
                     <h4 style={{ marginBottom: '15px', color: '#333' }}>Thông tin thẻ Visa/Mastercard</h4>
 
                     <div className="form-group">
-                      <label>Số thẻ <span className="required">*</span></label>
+                      <label>Số thẻ (12 số) <span className="required">*</span></label>
                       <input
                         type="text"
                         value={visaInfo.cardNumber}

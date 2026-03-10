@@ -342,7 +342,7 @@ const MyWallet = () => {
 
                             <div className="visa-form">
                                 <div className="form-group">
-                                    <label>Số thẻ *</label>
+                                    <label>Số thẻ (12 số) *</label>
                                     <input
                                         type="text"
                                         value={visaInfo.cardNumber}

@@ -31,7 +31,6 @@ const MovieCarousel = ({ movies, title }) => {
         const userInfo = localStorage.getItem('userInfo');
 
         if (!userInfo) {
-            localStorage.setItem('redirectAfterLogin', `/booking/${movieId}`);
             navigate('/login');
         } else {
             navigate(`/booking/${movieId}`);
@@ -150,17 +149,27 @@ const MovieCarousel = ({ movies, title }) => {
 
                                 <div className="carousel-movie-info">
                                     <h3 className="carousel-movie-title">{movie.title}</h3>
-                                    <div className="carousel-movie-meta">
-                                        <span className="carousel-genre">{movie.genre || 'N/A'}</span>
-                                        <span className="carousel-duration">{movie.duration || 0} phút</span>
-                                    </div>
-                                    <button
-                                        className="carousel-book-btn"
-                                        onClick={(e) => handleBookTicket(movie.id, e)}
-                                    >
-                                        Đặt Vé
-                                    </button>
+                                    {movie.releaseDate && (
+                                        <div className="carousel-release-date">
+                                            Khởi chiếu: {new Date(movie.releaseDate).toLocaleDateString('vi-VN')}
+                                        </div>
+                                    )}
+                                    {movie.genre && (
+                                        <div className="carousel-movie-genres">
+                                            {movie.genre.split(',').map((genre, index) => (
+                                                <span key={index} className="carousel-genre-badge">
+                                                    {genre.trim()}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
+                                <button
+                                    className="carousel-book-btn"
+                                    onClick={(e) => handleBookTicket(movie.id, e)}
+                                >
+                                    Đặt vé
+                                </button>
                             </div>
                         ))}
                     </div>

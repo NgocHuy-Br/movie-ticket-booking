@@ -67,15 +67,8 @@ const Login = () => {
         // Lưu token và thông tin user vào localStorage
         login(data.data.token, data.data.userInfo);
 
-        // Kiểm tra xem có redirect path nào được lưu không
-        const redirectPath = localStorage.getItem('redirectAfterLogin');
-        if (redirectPath) {
-          localStorage.removeItem('redirectAfterLogin');
-          navigate(redirectPath);
-        } else {
-          // Login thành công - redirect đến trang chủ
-          navigate('/');
-        }
+        // Login thành công - luôn redirect đến trang chủ
+        navigate('/');
       } else {
         setError(data.message || 'Tên đăng nhập hoặc mật khẩu không chính xác');
       }

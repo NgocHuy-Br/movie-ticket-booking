@@ -49,6 +49,8 @@ public class TheaterServiceImpl implements TheaterService {
         theater.setAddress(theaterDto.getAddress());
         theater.setPhone(theaterDto.getPhone());
         theater.setTotalRooms(theaterDto.getTotalRooms());
+        theater.setDefaultRows(theaterDto.getDefaultRows());
+        theater.setDefaultCols(theaterDto.getDefaultCols());
 
         Theater savedTheater = theaterRepository.save(theater);
 
@@ -73,6 +75,8 @@ public class TheaterServiceImpl implements TheaterService {
         theater.setCity(theaterDto.getCity());
         theater.setAddress(theaterDto.getAddress());
         theater.setPhone(theaterDto.getPhone());
+        theater.setDefaultRows(theaterDto.getDefaultRows());
+        theater.setDefaultCols(theaterDto.getDefaultCols());
 
         // Get current number of rooms before update
         int oldTotalRooms = theater.getTotalRooms();
@@ -178,6 +182,8 @@ public class TheaterServiceImpl implements TheaterService {
                 .address(theater.getAddress())
                 .phone(theater.getPhone())
                 .totalRooms(theater.getTotalRooms())
+                .defaultRows(theater.getDefaultRows())
+                .defaultCols(theater.getDefaultCols())
                 .build();
     }
 }

@@ -16,4 +16,6 @@ public class TheaterDto {
     private String address;
     private String phone;
     private Integer totalRooms;
+    private Integer defaultRows;
+    private Integer defaultCols;
 }

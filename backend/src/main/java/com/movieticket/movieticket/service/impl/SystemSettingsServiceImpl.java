@@ -70,7 +70,6 @@ public class SystemSettingsServiceImpl implements SystemSettingsService {
     public void initializeDefaultSettings() {
         Map<String, String> defaultSettings = new HashMap<>();
         defaultSettings.put("MAX_TICKETS_PER_BOOKING", "10");
-        defaultSettings.put("SEAT_HOLD_MINUTES", "10");
         defaultSettings.put("MIN_GAP_BETWEEN_SHOWS", "30");
         defaultSettings.put("AUTO_MARK_ENDED_AFTER_DAYS", "7");
         defaultSettings.put("MIN_HOURS_BEFORE_CANCEL", "48");
@@ -78,7 +77,6 @@ public class SystemSettingsServiceImpl implements SystemSettingsService {
 
         Map<String, String> descriptions = new HashMap<>();
         descriptions.put("MAX_TICKETS_PER_BOOKING", "Số vé tối đa mỗi lần đặt");
-        descriptions.put("SEAT_HOLD_MINUTES", "Thời gian giữ ghế (phút)");
         descriptions.put("MIN_GAP_BETWEEN_SHOWS", "Khoảng cách tối thiểu giữa các suất chiếu (phút)");
         descriptions.put("AUTO_MARK_ENDED_AFTER_DAYS",
                 "Số ngày sau suất chiếu cuối để tự động đánh dấu phim đã rời rạp");

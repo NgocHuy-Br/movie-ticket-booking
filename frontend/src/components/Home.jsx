@@ -117,7 +117,6 @@ const Home = () => {
     const userInfo = localStorage.getItem('userInfo');
 
     if (!userInfo) {
-      localStorage.setItem('redirectAfterLogin', `/booking/${movieId}`);
       navigate('/login');
     } else {
       navigate(`/booking/${movieId}`);
@@ -241,6 +240,11 @@ const Home = () => {
                     </div>
                     <div className="movie-info">
                       <h3 className="movie-title">{movie.title}</h3>
+                      {movie.releaseDate && (
+                        <div className="release-date">
+                          Khởi chiếu: {new Date(movie.releaseDate).toLocaleDateString('vi-VN')}
+                        </div>
+                      )}
                       {movie.genre && (
                         <div className="movie-genres">
                           {movie.genre.split(',').map((genre, index) => (
@@ -263,39 +267,53 @@ const Home = () => {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="pagination">
-                  <button
-                    className="pagination-btn"
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 0}
-                  >
-                    ← Trước
-                  </button>
+                <div style={{ textAlign: 'center', marginTop: '30px' }}>
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '10px',
+                    borderRadius: '8px',
+                    background: '#f8f9fa'
+                  }}>
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 0}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: currentPage === 0 ? 'transparent' : '#fff',
+                        cursor: currentPage === 0 ? 'not-allowed' : 'pointer',
+                        color: currentPage === 0 ? '#ccc' : '#495057',
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        transition: 'all 0.2s',
+                        boxShadow: currentPage === 0 ? 'none' : '0 1px 2px rgba(0,0,0,0.1)'
+                      }}
+                      title="Trang trước"
+                    >
+                      ‹
+                    </button>
 
-                  <div className="pagination-numbers">
                     {(() => {
                       const pageNumbers = [];
-                      const maxVisible = 7; // Maximum page numbers to show
+                      const maxVisible = 7;
 
                       if (totalPages <= maxVisible) {
-                        // Show all pages if total is small
                         for (let i = 0; i < totalPages; i++) {
                           pageNumbers.push(i);
                         }
                       } else {
-                        // Smart pagination with ellipsis
                         if (currentPage < 4) {
-                          // Near start: 1 2 3 4 5 ... 20
                           for (let i = 0; i < 5; i++) pageNumbers.push(i);
                           pageNumbers.push('ellipsis-end');
                           pageNumbers.push(totalPages - 1);
                         } else if (currentPage > totalPages - 5) {
-                          // Near end: 1 ... 16 17 18 19 20
                           pageNumbers.push(0);
                           pageNumbers.push('ellipsis-start');
                           for (let i = totalPages - 5; i < totalPages; i++) pageNumbers.push(i);
                         } else {
-                          // Middle: 1 ... 8 9 10 ... 20
                           pageNumbers.push(0);
                           pageNumbers.push('ellipsis-start');
                           for (let i = currentPage - 1; i <= currentPage + 1; i++) pageNumbers.push(i);
@@ -306,28 +324,75 @@ const Home = () => {
 
                       return pageNumbers.map((page, index) => {
                         if (typeof page === 'string') {
-                          return <span key={page} className="pagination-ellipsis">...</span>;
+                          return (
+                            <span key={page} style={{
+                              padding: '0 4px',
+                              color: '#6c757d',
+                              fontSize: '14px'
+                            }}>...</span>
+                          );
                         }
                         return (
                           <button
                             key={page}
-                            className={`pagination-number ${currentPage === page ? 'active' : ''}`}
                             onClick={() => handlePageChange(page)}
+                            style={{
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              border: 'none',
+                              background: currentPage === page ? '#007bff' : '#fff',
+                              color: currentPage === page ? '#fff' : '#495057',
+                              cursor: 'pointer',
+                              fontWeight: currentPage === page ? '600' : '500',
+                              minWidth: '36px',
+                              fontSize: '14px',
+                              transition: 'all 0.2s',
+                              boxShadow: currentPage === page ? '0 2px 4px rgba(0,123,255,0.3)' : '0 1px 2px rgba(0,0,0,0.1)'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (currentPage !== page) {
+                                e.target.style.background = '#e9ecef';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (currentPage !== page) {
+                                e.target.style.background = '#fff';
+                              }
+                            }}
                           >
                             {page + 1}
                           </button>
                         );
                       });
                     })()}
-                  </div>
 
-                  <button
-                    className="pagination-btn"
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages - 1}
-                  >
-                    Sau →
-                  </button>
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages - 1}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: currentPage === totalPages - 1 ? 'transparent' : '#fff',
+                        cursor: currentPage === totalPages - 1 ? 'not-allowed' : 'pointer',
+                        color: currentPage === totalPages - 1 ? '#ccc' : '#495057',
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        transition: 'all 0.2s',
+                        boxShadow: currentPage === totalPages - 1 ? 'none' : '0 1px 2px rgba(0,0,0,0.1)'
+                      }}
+                      title="Trang sau"
+                    >
+                      ›
+                    </button>
+                  </div>
+                  <div style={{
+                    marginTop: '8px',
+                    color: '#6c757d',
+                    fontSize: '13px'
+                  }}>
+                    Hiển thị trang {currentPage + 1} / {totalPages} · Tổng {totalItems} phim
+                  </div>
                 </div>
               )}
             </>

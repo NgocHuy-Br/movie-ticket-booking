@@ -4,6 +4,7 @@ import axios from 'axios';
 import Header from './Header';
 import Notification from './Notification';
 import { getUserInfo } from '../utils/auth';
+import { getMembershipLabel } from '../utils/membershipUtils';
 import './Booking.css';
 
 const Booking = () => {
@@ -228,6 +229,13 @@ const Booking = () => {
       return;
     }
 
+    // Check if user is admin and prevent booking
+    const userInfo = getUserInfo();
+    if (userInfo && userInfo.role === 'ADMIN') {
+      setNotification({ message: 'Admin không được đặt vé', type: 'error' });
+      return;
+    }
+
     const maxTickets = systemSettings.MAX_TICKETS_PER_BOOKING || 10;
     if (selectedSeats.length > maxTickets) {
       setNotification({ message: `Bạn chỉ có thể đặt tối đa ${maxTickets} vé cho một lần đặt!`, type: 'warning' });
@@ -240,7 +248,6 @@ const Booking = () => {
     }
 
     // Age validation
-    const userInfo = getUserInfo();
     if (userInfo && userInfo.birthDate && movie && movie.ageRating) {
       const birthDate = new Date(userInfo.birthDate);
       const today = new Date();
@@ -490,7 +497,7 @@ const Booking = () => {
                   {getMembershipDiscount() > 0 && (
                     <>
                       <p style={{ color: '#4CAF50' }}>
-                        <strong>💎 Giảm giá hạng {getUserInfo()?.membershipLevel}:</strong> -{getMembershipDiscount().toLocaleString('vi-VN')}đ
+                        <strong>💎 Giảm giá hạng {getMembershipLabel(getUserInfo()?.membershipLevel)}:</strong> -{getMembershipDiscount().toLocaleString('vi-VN')}đ
                         ({systemSettings.GOLD_DISCOUNT_PERCENT === undefined ? '...' : (getUserInfo()?.membershipLevel === 'GOLD' ? systemSettings.GOLD_DISCOUNT_PERCENT : systemSettings.PLATINUM_DISCOUNT_PERCENT)}%)
                       </p>
                     </>

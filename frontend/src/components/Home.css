@@ -108,6 +108,13 @@
   font-weight: 600;
 }
 
+.release-date {
+  color: #666;
+  font-size: 0.85em;
+  text-align: center;
+  font-style: italic;
+}
+
 .movie-genres {
   display: flex;
   flex-wrap: wrap;

@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -85,6 +86,12 @@ public class ShowtimeServiceImpl implements ShowtimeService {
 
         Theater theater = room.getTheater();
 
+        // Validate that showtime is not in the past
+        LocalDateTime showtimeDateTime = LocalDateTime.of(showtimeDto.getShowDate(), showtimeDto.getShowTime());
+        if (showtimeDateTime.isBefore(LocalDateTime.now()) || showtimeDateTime.isEqual(LocalDateTime.now())) {
+            throw new RuntimeException("Ngày và giờ chiếu phải sau thời điểm hiện tại!");
+        }
+
         // Validate showtime overlap (including cleanup time)
         validateShowtimeOverlap(
                 room.getId(),
@@ -112,8 +119,9 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         // Tự động tạo ghế cho suất chiếu
         initializeSeatsForShowtime(savedShowtime.getId());
 
-        // Update movie status after creating showtime
+        // Update movie status and release date after creating showtime
         movieService.updateMovieStatus(movie.getId());
+        movieService.updateMovieReleaseDate(movie.getId());
 
         return convertToDto(savedShowtime);
     }
@@ -123,6 +131,14 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     public ShowtimeDto updateShowtime(Long id, ShowtimeDto showtimeDto) {
         Showtime showtime = showtimeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Showtime not found with id: " + id));
+
+        // Validate that new showtime is not in the past (if date/time is being updated)
+        LocalDate newDate = showtimeDto.getShowDate() != null ? showtimeDto.getShowDate() : showtime.getShowDate();
+        LocalTime newTime = showtimeDto.getShowTime() != null ? showtimeDto.getShowTime() : showtime.getShowTime();
+        LocalDateTime showtimeDateTime = LocalDateTime.of(newDate, newTime);
+        if (showtimeDateTime.isBefore(LocalDateTime.now()) || showtimeDateTime.isEqual(LocalDateTime.now())) {
+            throw new RuntimeException("Ngày và giờ chiếu phải sau thời điểm hiện tại!");
+        }
 
         if (showtimeDto.getMovieId() != null && !showtimeDto.getMovieId().equals(showtime.getMovie().getId())) {
             Movie movie = movieRepository.findById(showtimeDto.getMovieId())
@@ -158,8 +174,9 @@ public class ShowtimeServiceImpl implements ShowtimeService {
 
         Showtime updatedShowtime = showtimeRepository.save(showtime);
 
-        // Update movie status after updating showtime
+        // Update movie status and release date after updating showtime
         movieService.updateMovieStatus(showtime.getMovie().getId());
+        movieService.updateMovieReleaseDate(showtime.getMovie().getId());
 
         return convertToDto(updatedShowtime);
     }
@@ -180,8 +197,9 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         seatRepository.deleteAll(seatRepository.findByShowtimeId(id));
         showtimeRepository.deleteById(id);
 
-        // Update movie status after deleting showtime
+        // Update movie status and release date after deleting showtime
         movieService.updateMovieStatus(movieId);
+        movieService.updateMovieReleaseDate(movieId);
     }
 
     @Override

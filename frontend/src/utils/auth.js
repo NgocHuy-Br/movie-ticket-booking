@@ -59,7 +59,6 @@ export const login = (token, userInfo) => {
 export const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userInfo');
-    localStorage.removeItem('redirectAfterLogin');
     window.dispatchEvent(new Event('userLogout'));
 };
 

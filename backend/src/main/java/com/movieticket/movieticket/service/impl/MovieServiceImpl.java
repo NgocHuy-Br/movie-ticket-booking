@@ -62,7 +62,8 @@ public class MovieServiceImpl implements MovieService {
         movie.setGenre(movieDto.getGenre());
         movie.setAgeRating(movieDto.getAgeRating());
         movie.setPosterUrl(movieDto.getImageUrl());
-        movie.setReleaseDate(movieDto.getReleaseDate());
+        // Release date will be auto-calculated from showtimes
+        movie.setReleaseDate(null);
 
         // Set status: default to COMING_SOON if not specified, otherwise use provided
         // status
@@ -137,7 +138,7 @@ public class MovieServiceImpl implements MovieService {
         movie.setGenre(movieDto.getGenre());
         movie.setAgeRating(movieDto.getAgeRating());
         movie.setPosterUrl(movieDto.getImageUrl());
-        movie.setReleaseDate(movieDto.getReleaseDate());
+        // Release date is auto-calculated from showtimes, not updated here
         movie.setStatus(newStatus);
 
         Movie updatedMovie = movieRepository.save(movie);
@@ -279,6 +280,20 @@ public class MovieServiceImpl implements MovieService {
         response.put("totalElements", totalElements);
 
         return response;
+    }
+
+    @Override
+    @Transactional
+    public void updateMovieReleaseDate(Long movieId) {
+        Movie movie = movieRepository.findById(movieId)
+                .orElseThrow(() -> new RuntimeException("Movie not found with id: " + movieId));
+
+        // Get the earliest showtime date for this movie
+        java.time.LocalDate earliestShowDate = showtimeRepository.findEarliestShowDateByMovieId(movieId);
+
+        // Update movie's release date (null if no showtimes exist)
+        movie.setReleaseDate(earliestShowDate);
+        movieRepository.save(movie);
     }
 
     private MovieDto convertToDto(Movie movie) {

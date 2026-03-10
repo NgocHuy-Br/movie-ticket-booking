@@ -52,7 +52,6 @@ const Header = () => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userInfo');
-    localStorage.removeItem('redirectAfterLogin');
     setIsLoggedIn(false);
     setUserInfo(null);
     setShowDropdown(false);
@@ -89,9 +88,9 @@ const Header = () => {
 
   const getMembershipBadge = (level) => {
     const badges = {
-      'PLATINUM': <span className="membership-badge platinum">Platinum</span>,
-      'GOLD': <span className="membership-badge gold">Gold</span>,
-      'NORMAL': <span className="membership-badge normal">Normal</span>
+      'PLATINUM': <span className="membership-badge platinum">BẠCH KIM</span>,
+      'GOLD': <span className="membership-badge gold">VÀNG</span>,
+      'NORMAL': <span className="membership-badge normal">ĐỒNG</span>
     };
     return badges[level] || null;
   };

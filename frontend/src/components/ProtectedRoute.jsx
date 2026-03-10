@@ -6,8 +6,7 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
     const location = useLocation();
 
     if (!isAuthenticated()) {
-        // Save the attempted URL for redirect after login
-        localStorage.setItem('redirectAfterLogin', location.pathname);
+        // Redirect to login - will go to homepage after successful login
         return <Navigate to="/login" replace />;
     }
 
