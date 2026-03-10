@@ -1,8 +1,10 @@
 package com.movieticket.movieticket.service;
 
 import com.movieticket.movieticket.dto.AuthResponse;
+import com.movieticket.movieticket.dto.ForgotPasswordRequest;
 import com.movieticket.movieticket.dto.LoginRequest;
 import com.movieticket.movieticket.dto.RegisterRequest;
+import com.movieticket.movieticket.dto.ResetPasswordRequest;
 import com.movieticket.movieticket.entity.User;
 
 public interface AuthService {
@@ -14,4 +16,8 @@ public interface AuthService {
     User getCurrentUser();
 
     AuthResponse.UserInfo getUserInfo(User user);
+
+    boolean validateForgotPassword(ForgotPasswordRequest request);
+
+    void resetPassword(ResetPasswordRequest request);
 }

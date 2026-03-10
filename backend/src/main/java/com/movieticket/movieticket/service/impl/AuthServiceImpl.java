@@ -2,8 +2,10 @@ package com.movieticket.movieticket.service.impl;
 
 import com.movieticket.movieticket.config.JwtTokenProvider;
 import com.movieticket.movieticket.dto.AuthResponse;
+import com.movieticket.movieticket.dto.ForgotPasswordRequest;
 import com.movieticket.movieticket.dto.LoginRequest;
 import com.movieticket.movieticket.dto.RegisterRequest;
+import com.movieticket.movieticket.dto.ResetPasswordRequest;
 import com.movieticket.movieticket.entity.User;
 import com.movieticket.movieticket.repository.UserRepository;
 import com.movieticket.movieticket.service.AuthService;
@@ -118,5 +120,30 @@ public class AuthServiceImpl implements AuthService {
                 .membershipLevel(user.getMembershipLevel() != null ? user.getMembershipLevel().name() : null)
                 .accountBalance(user.getAccountBalance())
                 .build();
+    }
+
+    @Override
+    public boolean validateForgotPassword(ForgotPasswordRequest request) {
+        // Kiểm tra tên đăng nhập có tồn tại không
+        User user = userRepository.findByUsername(request.getUsername())
+                .orElseThrow(() -> new RuntimeException("Tên đăng nhập không tồn tại trong hệ thống"));
+
+        // Kiểm tra email có khớp với tài khoản không
+        if (user.getEmail() == null || !user.getEmail().equalsIgnoreCase(request.getEmail())) {
+            throw new RuntimeException("Email không trùng khớp với tên đăng nhập này");
+        }
+
+        return true;
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        User user = userRepository.findByUsername(request.getUsername())
+                .orElseThrow(() -> new RuntimeException("Tên đăng nhập không tồn tại"));
+
+        // Mã hóa mật khẩu mới
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 }

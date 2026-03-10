@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Header from './Header';
 import MyMovies from './MyMovies';
 import MyWallet from './MyWallet';
+import Notification from './Notification';
 import { getUserInfo, updateUserInfo } from '../utils/auth';
 import './Account.css';
 
@@ -32,6 +33,7 @@ const Account = () => {
     new: false,
     confirm: false
   });
+  const [notification, setNotification] = useState(null);
 
   useEffect(() => {
     const info = getUserInfo();
@@ -73,6 +75,17 @@ const Account = () => {
       window.removeEventListener('userProfileUpdate', handleProfileUpdate);
     };
   }, [navigate, location.state]);
+
+  // ESC key handler for modal
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape' && isChangingPassword) {
+        handleCancelChangePassword();
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [isChangingPassword]);
 
   // Hàm compress và resize ảnh
   const compressImage = (file) => {
@@ -122,13 +135,13 @@ const Account = () => {
     if (file) {
       // Kiểm tra kích thước file (tối đa 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert('Kích thước ảnh không được vượt quá 5MB!');
+        setNotification({ message: 'Kích thước ảnh không được vượt quá 5MB!', type: 'error' });
         return;
       }
 
       // Kiểm tra định dạng file
       if (!file.type.startsWith('image/')) {
-        alert('Vui lòng chọn file ảnh!');
+        setNotification({ message: 'Vui lòng chọn file ảnh!', type: 'error' });
         return;
       }
 
@@ -138,7 +151,7 @@ const Account = () => {
         setPendingAvatar(compressedImage);
       } catch (error) {
         console.error('Error compressing image:', error);
-        alert('Có lỗi xảy ra khi xử lý ảnh!');
+        setNotification({ message: 'Có lỗi xảy ra khi xử lý ảnh!', type: 'error' });
       }
     }
   };
@@ -151,7 +164,7 @@ const Account = () => {
       const token = localStorage.getItem('token');
       if (!token) {
         alert('Bạn cần đăng nhập lại!');
-        navigate('/');
+        setTimeout(() => navigate('/'), 2000);
         return;
       }
 
@@ -179,13 +192,13 @@ const Account = () => {
         setUserInfo(updatedUserInfo);
         setAvatar(pendingAvatar);
         setPendingAvatar(null);
-        alert('Cập nhật ảnh đại diện thành công!');
+        setNotification({ message: 'Cập nhật ảnh đại diện thành công!', type: 'success' });
       } else {
-        alert(data.message || 'Có lỗi xảy ra khi cập nhật ảnh đại diện!');
+        setNotification({ message: data.message || 'Có lỗi xảy ra khi cập nhật ảnh đại diện!', type: 'error' });
       }
     } catch (error) {
       console.error('Error updating avatar:', error);
-      alert('Có lỗi xảy ra khi cập nhật ảnh đại diện!');
+      setNotification({ message: 'Có lỗi xảy ra khi cập nhật ảnh đại diện!', type: 'error' });
     } finally {
       setIsSavingAvatar(false);
     }
@@ -217,13 +230,13 @@ const Account = () => {
   const handleSaveProfile = async () => {
     // Validate phone number
     if (editForm.phone && !/^0\d{9}$/.test(editForm.phone)) {
-      alert('Số điện thoại phải là 10 chữ số, bắt đầu bằng 0');
+      setNotification({ message: 'Số điện thoại phải là 10 chữ số, bắt đầu bằng 0', type: 'error' });
       return;
     }
 
     // Validate email
     if (editForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editForm.email)) {
-      alert('Email không hợp lệ');
+      setNotification({ message: 'Email không hợp lệ', type: 'error' });
       return;
     }
 
@@ -231,7 +244,7 @@ const Account = () => {
       const token = localStorage.getItem('token');
       if (!token) {
         alert('Bạn cần đăng nhập lại!');
-        navigate('/');
+        setTimeout(() => navigate('/'), 2000);
         return;
       }
 
@@ -262,13 +275,13 @@ const Account = () => {
         updateUserInfo(updatedUserInfo);
         setUserInfo(updatedUserInfo);
         setIsEditing(false);
-        alert('Cập nhật thông tin thành công!');
+        setNotification({ message: 'Cập nhật thông tin thành công!', type: 'success' });
       } else {
-        alert(data.message || 'Có lỗi xảy ra khi cập nhật thông tin!');
+        setNotification({ message: data.message || 'Có lỗi xảy ra khi cập nhật thông tin!', type: 'error' });
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      alert('Có lỗi xảy ra khi cập nhật thông tin!');
+      setNotification({ message: 'Có lỗi xảy ra khi cập nhật thông tin!', type: 'error' });
     }
   };
 
@@ -279,17 +292,17 @@ const Account = () => {
 
   const handleChangePassword = async () => {
     if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
-      alert('Vui lòng điền đầy đủ thông tin!');
+      setNotification({ message: 'Vui lòng điền đầy đủ thông tin!', type: 'error' });
       return;
     }
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      alert('Mật khẩu mới không khớp!');
+      setNotification({ message: 'Mật khẩu mới không khớp!', type: 'error' });
       return;
     }
 
     if (passwordForm.newPassword.length < 6) {
-      alert('Mật khẩu mới phải có ít nhất 6 ký tự!');
+      setNotification({ message: 'Mật khẩu mới phải có ít nhất 6 ký tự!', type: 'error' });
       return;
     }
 
@@ -310,7 +323,7 @@ const Account = () => {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        alert('Đổi mật khẩu thành công!');
+        setNotification({ message: 'Đổi mật khẩu thành công!', type: 'success' });
         setIsChangingPassword(false);
         setPasswordForm({
           currentPassword: '',
@@ -318,11 +331,11 @@ const Account = () => {
           confirmPassword: ''
         });
       } else {
-        alert(data.message || 'Có lỗi xảy ra!');
+        setNotification({ message: data.message || 'Có lỗi xảy ra!', type: 'error' });
       }
     } catch (error) {
       console.error('Error changing password:', error);
-      alert('Có lỗi xảy ra khi đổi mật khẩu!');
+      setNotification({ message: 'Có lỗi xảy ra khi đổi mật khẩu!', type: 'error' });
     }
   };
 
@@ -545,8 +558,8 @@ const Account = () => {
 
       {/* Modal Thay đổi Mật khẩu */}
       {isChangingPassword && (
-        <div className="modal-overlay" onClick={handleCancelChangePassword}>
-          <div className="modal-content password-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay">
+          <div className="modal-content password-modal">
             <div className="modal-header">
               <h3>Thay đổi Mật khẩu</h3>
               <button className="close-btn" onClick={handleCancelChangePassword}>
@@ -655,6 +668,15 @@ const Account = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Notification popup */}
+      {notification && (
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          onClose={() => setNotification(null)}
+        />
       )}
     </>
   );

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Header from './Header';
+import Notification from './Notification';
 import './Payment.css';
 
 const Payment = () => {
@@ -46,6 +47,7 @@ const Payment = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successData, setSuccessData] = useState(null);
+  const [notification, setNotification] = useState(null);
 
   // Load thông tin user và fetch số dư từ backend
   useEffect(() => {
@@ -79,6 +81,21 @@ const Payment = () => {
     };
     loadUserInfo();
   }, []);
+
+  // ESC key handler for modals
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        if (showConfirmModal) {
+          setShowConfirmModal(false);
+        } else if (showSuccessModal) {
+          setShowSuccessModal(false);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [showConfirmModal, showSuccessModal]);
 
   // Kiểm tra số dư khi paymentMethod thay đổi
   useEffect(() => {
@@ -201,7 +218,7 @@ const Payment = () => {
       setShowConfirmModal(true);
     } else {
       if (errors.visa) {
-        alert(errors.visa);
+        setNotification({ message: errors.visa, type: 'error' });
       }
     }
   };
@@ -212,8 +229,8 @@ const Payment = () => {
 
       // Validate required booking data
       if (!bookingData.showtimeId || !bookingData.seats || bookingData.seats.length === 0) {
-        alert('Thông tin đặt vé không hợp lệ. Vui lòng quay lại trang đặt vé.');
-        navigate('/');
+        setNotification({ message: 'Thông tin đặt vé không hợp lệ. Vui lòng quay lại trang đặt vé.', type: 'error' });
+        setTimeout(() => navigate('/'), 2000);
         return;
       }
 
@@ -292,7 +309,7 @@ const Payment = () => {
       setShowSuccessModal(true);
     } catch (error) {
       console.error('Error creating booking:', error);
-      alert(error.message || 'Đã có lỗi xảy ra khi đặt vé. Vui lòng thử lại!');
+      setNotification({ message: error.message || 'Đã có lỗi xảy ra khi đặt vé. Vui lòng thử lại!', type: 'error' });
       setShowConfirmModal(false);
     }
   };
@@ -501,8 +518,8 @@ const Payment = () => {
 
       {/* Modal xác nhận thanh toán */}
       {showConfirmModal && (
-        <div className="modal-overlay" onClick={() => setShowConfirmModal(false)}>
-          <div className="modal-content payment-confirm-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay">
+          <div className="modal-content payment-confirm-modal">
             <h3>Xác Nhận Thanh Toán</h3>
             <div className="payment-confirm-info">
               <p>Bạn có chắc chắn muốn thanh toán với thông tin sau:</p>
@@ -573,6 +590,15 @@ const Payment = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Notification popup */}
+      {notification && (
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          onClose={() => setNotification(null)}
+        />
       )}
     </>
   );

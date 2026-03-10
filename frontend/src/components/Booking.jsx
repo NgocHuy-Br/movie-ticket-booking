@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Header from './Header';
+import Notification from './Notification';
 import { getUserInfo } from '../utils/auth';
 import './Booking.css';
 
@@ -21,6 +22,7 @@ const Booking = () => {
   const [selectedShowtime, setSelectedShowtime] = useState(null);
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [localSelectedSeats, setLocalSelectedSeats] = useState({});
+  const [notification, setNotification] = useState(null);
 
   // Fetch movie details
   useEffect(() => {
@@ -30,8 +32,8 @@ const Booking = () => {
         setMovie(response.data.data);
       } catch (error) {
         console.error('Error fetching movie:', error);
-        alert('Không thể tải thông tin phim');
-        navigate('/');
+        setNotification({ message: 'Không thể tải thông tin phim', type: 'error' });
+        setTimeout(() => navigate('/'), 2000);
       }
     };
 
@@ -113,7 +115,7 @@ const Booking = () => {
       } catch (error) {
         console.error('[ERROR] Error fetching seats:', error);
         console.error('[ERROR] Error details:', error.response?.data || error.message);
-        alert('Không thể tải sơ đồ ghế. Vui lòng kiểm tra console để xem chi tiết lỗi.');
+        setNotification({ message: 'Không thể tải sơ đồ ghế. Vui lòng kiểm tra console để xem chi tiết lỗi.', type: 'error' });
       }
     };
 
@@ -156,7 +158,7 @@ const Booking = () => {
 
     // Kiểm tra số lượng vé tối đa khi chọn thêm ghế
     if (!isCurrentlySelected && selectedSeats.length >= maxTickets) {
-      alert(`Bạn chỉ có thể đặt tối đa ${maxTickets} vé cho một lần đặt!`);
+      setNotification({ message: `Bạn chỉ có thể đặt tối đa ${maxTickets} vé cho một lần đặt!`, type: 'warning' });
       return;
     }
 
@@ -222,18 +224,18 @@ const Booking = () => {
 
   const handleConfirm = () => {
     if (selectedSeats.length === 0) {
-      alert('Vui lòng chọn ít nhất một ghế!');
+      setNotification({ message: 'Vui lòng chọn ít nhất một ghế!', type: 'warning' });
       return;
     }
 
     const maxTickets = systemSettings.MAX_TICKETS_PER_BOOKING || 10;
     if (selectedSeats.length > maxTickets) {
-      alert(`Bạn chỉ có thể đặt tối đa ${maxTickets} vé cho một lần đặt!`);
+      setNotification({ message: `Bạn chỉ có thể đặt tối đa ${maxTickets} vé cho một lần đặt!`, type: 'warning' });
       return;
     }
 
     if (!selectedShowtime) {
-      alert('Vui lòng chọn suất chiếu!');
+      setNotification({ message: 'Vui lòng chọn suất chiếu!', type: 'warning' });
       return;
     }
 
@@ -262,12 +264,15 @@ const Booking = () => {
         requiredAge = 18;
         ratingMessage = 'T18 - Cấm khán giả dưới 18 tuổi';
       } else if (rating === 'C') {
-        alert('Phim này đã bị cấm chiếu và không thể đặt vé.');
+        setNotification({ message: 'Phim này đã bị cấm chiếu và không thể đặt vé.', type: 'error' });
         return;
       }
 
       if (requiredAge > 0 && age < requiredAge) {
-        alert(`Bạn không đủ tuổi để xem phim này!\n\nPhim được phân loại: ${ratingMessage}\nTuổi của bạn: ${age} tuổi\nYêu cầu tối thiểu: ${requiredAge} tuổi`);
+        setNotification({
+          message: `Bạn không đủ tuổi để xem phim này!\n\nPhim được phân loại: ${ratingMessage}\nTuổi của bạn: ${age} tuổi\nYêu cầu tối thiểu: ${requiredAge} tuổi`,
+          type: 'error'
+        });
         return;
       }
     }
@@ -508,6 +513,15 @@ const Booking = () => {
           </div>
         </div>
       </div>
+
+      {/* Notification popup */}
+      {notification && (
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          onClose={() => setNotification(null)}
+        />
+      )}
     </>
   );
 };

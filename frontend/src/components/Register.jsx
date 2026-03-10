@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Header from './Header';
+import Notification from './Notification';
 import { login } from '../utils/auth';
 import './Register.css';
 
@@ -18,6 +19,7 @@ const Register = () => {
     confirmPassword: ''
   });
   const [errors, setErrors] = useState({});
+  const [notification, setNotification] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -109,15 +111,15 @@ const Register = () => {
           // Lưu token và thông tin user vào localStorage (auto-login)
           login(data.data.token, data.data.userInfo);
 
-          alert('Đăng ký thành công!');
+          setNotification({ message: 'Đăng ký thành công!', type: 'success' });
           // Redirect về trang chủ
-          navigate('/');
+          setTimeout(() => navigate('/'), 2000);
         } else {
-          alert(data.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+          setNotification({ message: data.message || 'Đăng ký thất bại. Vui lòng thử lại.', type: 'error' });
         }
       } catch (error) {
         console.error('Register error:', error);
-        alert('Có lỗi xảy ra. Vui lòng thử lại sau.');
+        setNotification({ message: 'Có lỗi xảy ra. Vui lòng thử lại sau.', type: 'error' });
       }
     }
   };
@@ -254,6 +256,15 @@ const Register = () => {
           <Link to="/login">Đã có tài khoản? Đăng nhập</Link>
         </div>
       </div>
+
+      {/* Notification popup */}
+      {notification && (
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          onClose={() => setNotification(null)}
+        />
+      )}
     </>
   );
 };
