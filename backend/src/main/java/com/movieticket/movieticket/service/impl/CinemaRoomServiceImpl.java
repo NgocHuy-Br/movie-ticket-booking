@@ -4,6 +4,7 @@ import com.movieticket.movieticket.dto.CinemaRoomDto;
 import com.movieticket.movieticket.entity.CinemaRoom;
 import com.movieticket.movieticket.entity.Theater;
 import com.movieticket.movieticket.repository.CinemaRoomRepository;
+import com.movieticket.movieticket.repository.ShowtimeRepository;
 import com.movieticket.movieticket.repository.TheaterRepository;
 import com.movieticket.movieticket.service.CinemaRoomService;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class CinemaRoomServiceImpl implements CinemaRoomService {
 
     private final CinemaRoomRepository roomRepository;
     private final TheaterRepository theaterRepository;
+    private final ShowtimeRepository showtimeRepository;
 
     @Override
     public List<CinemaRoomDto> getAllRooms() {
@@ -68,6 +70,11 @@ public class CinemaRoomServiceImpl implements CinemaRoomService {
         CinemaRoom room = roomRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cinema room not found with id: " + id));
 
+        // Check if room has any showtimes
+        if (showtimeRepository.existsByRoomId(id)) {
+            throw new RuntimeException("Không thể chỉnh sửa phòng chiếu đã có suất chiếu!");
+        }
+
         if (roomDto.getName() != null && !roomDto.getName().equals(room.getName())) {
             if (roomRepository.existsByTheaterIdAndName(room.getTheater().getId(), roomDto.getName())) {
                 throw new RuntimeException("Room with name '" + roomDto.getName() + "' already exists in this theater");
@@ -92,6 +99,11 @@ public class CinemaRoomServiceImpl implements CinemaRoomService {
     public void deleteRoom(Long id) {
         if (!roomRepository.existsById(id)) {
             throw new RuntimeException("Cinema room not found with id: " + id);
+        }
+        // Check if room has any showtimes
+        if (showtimeRepository.existsByRoomId(id)) {
+            throw new RuntimeException(
+                    "Không thể xóa phòng chiếu đã có suất chiếu. Vui lòng xóa tất cả suất chiếu liên quan trước!");
         }
         roomRepository.deleteById(id);
     }

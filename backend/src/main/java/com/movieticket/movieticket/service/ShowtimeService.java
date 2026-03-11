@@ -14,6 +14,8 @@ public interface ShowtimeService {
 
     List<ShowtimeDto> getShowtimesByMovieId(Long movieId);
 
+    List<ShowtimeDto> getShowtimesByRoomId(Long roomId);
+
     List<ShowtimeDto> getShowtimesByMovieAndTheater(Long movieId, Long theaterId);
 
     List<ShowtimeDto> getShowtimesByMovieAndDate(Long movieId, LocalDate date);

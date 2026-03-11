@@ -62,6 +62,13 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     }
 
     @Override
+    public List<ShowtimeDto> getShowtimesByRoomId(Long roomId) {
+        return showtimeRepository.findByRoomId(roomId).stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public List<ShowtimeDto> getShowtimesByMovieAndTheater(Long movieId, Long theaterId) {
         return showtimeRepository.findByMovieIdAndTheaterId(movieId, theaterId).stream()
                 .map(this::convertToDto)

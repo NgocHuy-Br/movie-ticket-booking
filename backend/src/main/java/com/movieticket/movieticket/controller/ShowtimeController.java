@@ -26,6 +26,7 @@ public class ShowtimeController {
     public ResponseEntity<ApiResponse<List<ShowtimeDto>>> getAllShowtimes(
             @RequestParam(required = false) Long movieId,
             @RequestParam(required = false) Long theaterId,
+            @RequestParam(required = false) Long roomId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
         List<ShowtimeDto> showtimes;
@@ -36,6 +37,8 @@ public class ShowtimeController {
             showtimes = showtimeService.getShowtimesByMovieAndDate(movieId, date);
         } else if (movieId != null) {
             showtimes = showtimeService.getShowtimesByMovieId(movieId);
+        } else if (roomId != null) {
+            showtimes = showtimeService.getShowtimesByRoomId(roomId);
         } else {
             showtimes = showtimeService.getAllShowtimes();
         }

@@ -598,7 +598,7 @@ const Admin = () => {
     };
 
     const deleteTheater = async (id, name) => {
-        if (!window.confirm(`Bạn có chắc chắn muốn xóa rạp "${name}"?\n\nLưu ý: Chỉ xóa được nếu rạp chưa có suất chiếu!`)) {
+        if (!window.confirm(`Bạn có chắc chắn muốn xóa rạp "${name}"?\n\nLưu ý: Chỉ xóa được nếu rạp chưa có phòng chiếu và suất chiếu!`)) {
             return;
         }
 
@@ -635,7 +635,22 @@ const Admin = () => {
         setShowRoomModal(true);
     };
 
-    const openEditRoomModal = (room) => {
+    const openEditRoomModal = async (room) => {
+        // Check if room has any showtimes
+        try {
+            const response = await fetch(`http://localhost:8080/api/showtimes?roomId=${room.id}`, {
+                headers: getAuthHeaders()
+            });
+            const data = await response.json();
+
+            if (data.success && data.data && data.data.length > 0) {
+                alert('⚠️ Không thể chỉnh sửa phòng chiếu này!\n\nPhòng đã có suất chiếu. Vui lòng xóa tất cả suất chiếu trước khi chỉnh sửa.');
+                return;
+            }
+        } catch (error) {
+            console.error('Error checking showtimes:', error);
+        }
+
         setRoomForm({
             id: room.id,
             theaterId: room.theaterId,
@@ -3808,18 +3823,7 @@ const Admin = () => {
                                 </div>
                             </div>
 
-                            {isEditModeRoom && (
-                                <div style={{
-                                    background: '#fff9c4',
-                                    border: '1px solid #fbc02d',
-                                    borderRadius: '8px',
-                                    padding: '12px',
-                                    fontSize: '0.9em',
-                                    color: '#f57f17'
-                                }}>
-                                    <strong>⚠️ Lưu ý:</strong> Thay đổi số ghế có thể ảnh hưởng đến các suất chiếu hiện tại.
-                                </div>
-                            )}
+                            {/* Edit mode not allowed if room has showtimes - checked in openEditRoomModal */}
                         </div>
 
                         <div className="modal-footer">

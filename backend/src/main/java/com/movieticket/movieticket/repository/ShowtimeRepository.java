@@ -35,4 +35,6 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
 
     @Query("SELECT s FROM Showtime s WHERE s.room.id = :roomId AND s.showDate = :showDate")
     List<Showtime> findByRoomIdAndShowDate(@Param("roomId") Long roomId, @Param("showDate") LocalDate showDate);
+
+    boolean existsByRoomId(Long roomId);
 }
