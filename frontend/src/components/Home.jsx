@@ -164,13 +164,48 @@ const Home = () => {
           <div className="filters-container">
             <div className="filter-group search-group">
               <label>Tìm kiếm:</label>
-              <input
-                type="text"
-                placeholder="Nhập tên phim..."
-                value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(0); }}
-                className="filter-input search-input"
-              />
+              <div style={{ position: 'relative', width: '100%' }}>
+                <input
+                  type="text"
+                  placeholder="Nhập tên phim..."
+                  value={searchTerm}
+                  onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(0); }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      setSearchTerm('');
+                      setCurrentPage(0);
+                    }
+                  }}
+                  className="filter-input search-input"
+                  style={{ paddingRight: '35px' }}
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => { setSearchTerm(''); setCurrentPage(0); }}
+                    style={{
+                      position: 'absolute',
+                      right: '8px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '18px',
+                      cursor: 'pointer',
+                      color: '#999',
+                      padding: '0',
+                      margin: '0',
+                      lineHeight: '1',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '20px',
+                      width: '20px'
+                    }}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="filter-group">
@@ -237,6 +272,50 @@ const Home = () => {
                         </span>
                       )}
                       <span className="age-rating">{movie.ageRating || '13+'}</span>
+
+                      {/* Thumbnail Preview Overlay */}
+                      <div className="movie-preview-overlay">
+                        <div className="preview-content">
+                          <h4 className="preview-title">{movie.title}</h4>
+
+                          <div className="preview-info-row">
+                            <span className="preview-label">🎬 Độ tuổi:</span>
+                            <span className="preview-value">{movie.ageRating || 'N/A'}</span>
+                          </div>
+
+                          <div className="preview-info-row">
+                            <span className="preview-label">⏱️ Thời lượng:</span>
+                            <span className="preview-value">{movie.duration ? `${movie.duration} phút` : 'N/A'}</span>
+                          </div>
+
+                          {movie.genre && (
+                            <div className="preview-info-row">
+                              <span className="preview-label">🎭 Thể loại:</span>
+                              <span className="preview-value">{movie.genre}</span>
+                            </div>
+                          )}
+
+                          {movie.releaseDate && (
+                            <div className="preview-info-row">
+                              <span className="preview-label">📅 Khởi chiếu:</span>
+                              <span className="preview-value">
+                                {new Date(movie.releaseDate).toLocaleDateString('vi-VN')}
+                              </span>
+                            </div>
+                          )}
+
+                          {movie.description && (
+                            <div className="preview-description">
+                              <p className="preview-label">📖 Nội dung:</p>
+                              <p className="preview-desc-text">
+                                {movie.description.length > 150
+                                  ? `${movie.description.substring(0, 150)}...`
+                                  : movie.description}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                     <div className="movie-info">
                       <h3 className="movie-title">{movie.title}</h3>

@@ -1962,6 +1962,11 @@ const Admin = () => {
                                         placeholder="🔍 Tìm theo tên phim..."
                                         value={movieSearch}
                                         onChange={(e) => setMovieSearch(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Escape') {
+                                                setMovieSearch('');
+                                            }
+                                        }}
                                         style={{
                                             width: '100%',
                                             padding: '10px 35px 10px 12px',
@@ -1975,16 +1980,22 @@ const Admin = () => {
                                             onClick={() => setMovieSearch('')}
                                             style={{
                                                 position: 'absolute',
-                                                right: '5px',
+                                                right: '8px',
                                                 top: '50%',
                                                 transform: 'translateY(-50%)',
                                                 background: 'none',
                                                 border: 'none',
-                                                fontSize: '22px',
+                                                fontSize: '18px',
                                                 cursor: 'pointer',
                                                 color: '#999',
-                                                padding: '0 8px',
-                                                lineHeight: '1'
+                                                padding: '0',
+                                                margin: '0',
+                                                lineHeight: '1',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                height: '20px',
+                                                width: '20px'
                                             }}
                                         >
                                             ×
@@ -2165,6 +2176,11 @@ const Admin = () => {
                                         placeholder="🔍 Tìm theo tên rạp..."
                                         value={theaterSearch}
                                         onChange={(e) => setTheaterSearch(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Escape') {
+                                                setTheaterSearch('');
+                                            }
+                                        }}
                                         style={{
                                             width: '100%',
                                             padding: '10px 35px 10px 12px',
@@ -2178,16 +2194,22 @@ const Admin = () => {
                                             onClick={() => setTheaterSearch('')}
                                             style={{
                                                 position: 'absolute',
-                                                right: '5px',
+                                                right: '8px',
                                                 top: '50%',
                                                 transform: 'translateY(-50%)',
                                                 background: 'none',
                                                 border: 'none',
-                                                fontSize: '22px',
+                                                fontSize: '18px',
                                                 cursor: 'pointer',
                                                 color: '#999',
-                                                padding: '0 8px',
-                                                lineHeight: '1'
+                                                padding: '0',
+                                                margin: '0',
+                                                lineHeight: '1',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                height: '20px',
+                                                width: '20px'
                                             }}
                                         >
                                             ×
@@ -2468,6 +2490,11 @@ const Admin = () => {
                                         placeholder="🔍 Tìm theo tên phim..."
                                         value={showtimeSearch}
                                         onChange={(e) => setShowtimeSearch(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Escape') {
+                                                setShowtimeSearch('');
+                                            }
+                                        }}
                                         style={{
                                             width: '100%',
                                             padding: '12px 40px 12px 20px',
@@ -2485,19 +2512,22 @@ const Admin = () => {
                                             onClick={() => setShowtimeSearch('')}
                                             style={{
                                                 position: 'absolute',
-                                                right: '5px',
+                                                right: '8px',
                                                 top: '50%',
                                                 transform: 'translateY(-50%)',
                                                 background: 'none',
                                                 border: 'none',
-                                                fontSize: '22px',
+                                                fontSize: '18px',
                                                 color: '#999',
                                                 cursor: 'pointer',
-                                                padding: '5px 8px',
+                                                padding: '0',
+                                                margin: '0',
                                                 lineHeight: '1',
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                justifyContent: 'center'
+                                                justifyContent: 'center',
+                                                height: '20px',
+                                                width: '20px'
                                             }}
                                             onMouseEnter={(e) => e.target.style.color = '#333'}
                                             onMouseLeave={(e) => e.target.style.color = '#999'}
@@ -2660,6 +2690,11 @@ const Admin = () => {
                                         placeholder="🔍 Tìm theo tên, username, email..."
                                         value={userSearch}
                                         onChange={(e) => setUserSearch(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Escape') {
+                                                setUserSearch('');
+                                            }
+                                        }}
                                         style={{
                                             width: '100%',
                                             padding: '10px 35px 10px 12px',
@@ -2673,16 +2708,22 @@ const Admin = () => {
                                             onClick={() => setUserSearch('')}
                                             style={{
                                                 position: 'absolute',
-                                                right: '5px',
+                                                right: '8px',
                                                 top: '50%',
                                                 transform: 'translateY(-50%)',
                                                 background: 'none',
                                                 border: 'none',
-                                                fontSize: '22px',
+                                                fontSize: '18px',
                                                 cursor: 'pointer',
                                                 color: '#999',
-                                                padding: '0 8px',
-                                                lineHeight: '1'
+                                                padding: '0',
+                                                margin: '0',
+                                                lineHeight: '1',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                height: '20px',
+                                                width: '20px'
                                             }}
                                         >
                                             ×
@@ -2787,6 +2828,11 @@ const Admin = () => {
                                         placeholder="🔍 Tìm theo mã vé, khách hàng, phim..."
                                         value={bookingSearch}
                                         onChange={(e) => setBookingSearch(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Escape') {
+                                                setBookingSearch('');
+                                            }
+                                        }}
                                         style={{
                                             width: '100%',
                                             padding: '10px 35px 10px 12px',
@@ -2800,16 +2846,22 @@ const Admin = () => {
                                             onClick={() => setBookingSearch('')}
                                             style={{
                                                 position: 'absolute',
-                                                right: '5px',
+                                                right: '8px',
                                                 top: '50%',
                                                 transform: 'translateY(-50%)',
                                                 background: 'none',
                                                 border: 'none',
-                                                fontSize: '22px',
+                                                fontSize: '18px',
                                                 cursor: 'pointer',
                                                 color: '#999',
-                                                padding: '0 8px',
-                                                lineHeight: '1'
+                                                padding: '0',
+                                                margin: '0',
+                                                lineHeight: '1',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                height: '20px',
+                                                width: '20px'
                                             }}
                                         >
                                             ×

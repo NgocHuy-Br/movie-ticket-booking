@@ -145,6 +145,50 @@ const MovieCarousel = ({ movies, title }) => {
                                         </span>
                                     )}
                                     <span className="carousel-age-rating">{movie.ageRating || '13+'}</span>
+
+                                    {/* Thumbnail Preview Overlay */}
+                                    <div className="carousel-preview-overlay">
+                                        <div className="carousel-preview-content">
+                                            <h4 className="carousel-preview-title">{movie.title}</h4>
+
+                                            <div className="carousel-preview-info-row">
+                                                <span className="carousel-preview-label">🎬 Độ tuổi:</span>
+                                                <span className="carousel-preview-value">{movie.ageRating || 'N/A'}</span>
+                                            </div>
+
+                                            <div className="carousel-preview-info-row">
+                                                <span className="carousel-preview-label">⏱️ Thời lượng:</span>
+                                                <span className="carousel-preview-value">{movie.duration ? `${movie.duration} phút` : 'N/A'}</span>
+                                            </div>
+
+                                            {movie.genre && (
+                                                <div className="carousel-preview-info-row">
+                                                    <span className="carousel-preview-label">🎭 Thể loại:</span>
+                                                    <span className="carousel-preview-value">{movie.genre}</span>
+                                                </div>
+                                            )}
+
+                                            {movie.releaseDate && (
+                                                <div className="carousel-preview-info-row">
+                                                    <span className="carousel-preview-label">📅 Khởi chiếu:</span>
+                                                    <span className="carousel-preview-value">
+                                                        {new Date(movie.releaseDate).toLocaleDateString('vi-VN')}
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            {movie.description && (
+                                                <div className="carousel-preview-description">
+                                                    <p className="carousel-preview-label">📖 Nội dung:</p>
+                                                    <p className="carousel-preview-desc-text">
+                                                        {movie.description.length > 120
+                                                            ? `${movie.description.substring(0, 120)}...`
+                                                            : movie.description}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div className="carousel-movie-info">
